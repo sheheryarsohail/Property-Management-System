@@ -30,6 +30,7 @@ import { CommunicationModule } from './communication/communication.module';
 import { ReportsModule } from './reports/reports.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { PortalModule } from './portal/portal.module';
+import { ContentModule } from './content/content.module';
 import { TenantsModule } from './tenants/tenants.module';
 
 import { StorageModule } from './storage/storage.module';
@@ -78,6 +79,7 @@ import { PdfStatusController } from './queue/pdf-status.controller';
     ReportsModule,
     DashboardModule,
     PortalModule,
+    ContentModule,
 
     // infra / cross-cutting
     StorageModule,

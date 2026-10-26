@@ -90,6 +90,28 @@ export class CustomersService {
     });
   }
 
+  async updatePortalCredentials(id: string, pinOrPassword?: string) {
+    const customer = await this.prisma.customer.findUnique({ where: { id } });
+    if (!customer) throw new NotFoundException('Customer not found');
+
+    let portalPassword: string | null = null;
+    if (pinOrPassword && pinOrPassword.trim().length > 0) {
+      portalPassword = pinOrPassword.trim();
+    }
+
+    return this.prisma.customer.update({
+      where: { id },
+      data: { portalPassword },
+      select: {
+        id: true,
+        code: true,
+        portalAccessId: true,
+        isPortalActive: true,
+        portalPassword: true,
+      },
+    });
+  }
+
   async update(tenantId: string, id: string, input: any) {
     const customer = await this.prisma.customer.findFirst({
       where: { id, tenantId },

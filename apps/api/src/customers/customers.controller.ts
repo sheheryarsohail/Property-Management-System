@@ -28,6 +28,11 @@ export class CustomersController {
     return this.svc.updatePortalStatus(id, body.isActive);
   }
 
+  @Post(':id/portal-credentials')
+  updatePortalCredentials(@Param('id') id: string, @Body() body: { password?: string; pin?: string }) {
+    return this.svc.updatePortalCredentials(id, body.password || body.pin);
+  }
+
   @Put(':id')
   update(@TenantId() tenantId: string, @Param('id') id: string, @Body() body: UpdateCustomerDto) {
     return this.svc.update(tenantId, id, body);
