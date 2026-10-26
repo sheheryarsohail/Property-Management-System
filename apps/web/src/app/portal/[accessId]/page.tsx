@@ -181,7 +181,7 @@ export default function CustomerPortalPage() {
             </div>
             <div className="bg-emerald-50/60 rounded-xl p-3.5 border border-emerald-100">
               <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-800">Plot Cost Paid</p>
-              <p className="text-xl font-black text-emerald-700 mt-0.5">{formatCurrency(summary.totalPaid || 0)}</p>
+              <p className="text-xl font-black text-emerald-700 mt-0.5">{formatCurrency(summary.totalPlotPaid ?? summary.totalPaid ?? 0)}</p>
             </div>
             <div className="bg-blue-50/60 rounded-xl p-3.5 border border-blue-100">
               <p className="text-[11px] font-bold uppercase tracking-wider text-blue-800">Dev Charges Paid</p>

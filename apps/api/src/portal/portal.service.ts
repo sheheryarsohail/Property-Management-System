@@ -114,6 +114,9 @@ export class PortalService {
     }
 
     let totalPaidAll = 0;
+    let totalPlotPaidAll = 0;
+    let totalDevPaidAll = 0;
+    let totalValueAll = 0;
     let totalOutstandingAll = 0;
     let totalArrearsAll = 0;
     let totalProperties = customer.ownerships.length;
@@ -129,7 +132,7 @@ export class PortalService {
         const activeInvoices = property.invoices || [];
 
         // Check if property was transferred (query verified OwnershipTransfer)
-        let previousOwner: { name: string; transferDate: string } | null = null;
+        let previousOwner: { name: string; previousOwnerName: string; transferDate: string } | null = null;
         const transfer = await this.prisma.ownershipTransfer.findFirst({
           where: {
             propertyId: property.id,
@@ -144,25 +147,40 @@ export class PortalService {
 
         if (transfer) {
           const snap = transfer.previousOwnerSnapshot as any;
+          const ownerName = snap?.fullName || transfer.from?.fullName || 'Previous Allottee';
           previousOwner = {
-            name: snap?.fullName || transfer.from?.fullName || 'Previous Allottee',
+            name: ownerName,
+            previousOwnerName: ownerName,
             transferDate: transfer.transferDate.toISOString()
           };
         }
 
         // Categorize Receipts
-        const installmentReceipts = allReceipts.filter(
-          (r) => r.category !== 'DEVELOPMENT' && !r.code?.startsWith('DEV-')
+        const devInvoiceIds = new Set(
+          activeInvoices
+            .filter((inv) => inv.type === 'DEVELOPMENT_CHARGE')
+            .map((inv) => inv.id)
         );
+
         const devReceipts = allReceipts.filter(
-          (r) => r.category === 'DEVELOPMENT' || r.code?.startsWith('DEV-')
+          (r) =>
+            r.category === 'DEVELOPMENT' ||
+            r.code?.startsWith('DEV-') ||
+            (r.invoiceId && devInvoiceIds.has(r.invoiceId))
+        );
+        const installmentReceipts = allReceipts.filter(
+          (r) => !devReceipts.includes(r)
         );
 
         // Plot Base Price & Dev Charges separation
         const plotPrice = paymentPlan?.totalAmount
           ? Number(paymentPlan.totalAmount)
           : Number(property.totalPrice || 0);
-        const devCharges = Number(property.developmentCharges || 0);
+
+        const devInvoiceTotal = activeInvoices
+          .filter((inv) => inv.type === 'DEVELOPMENT_CHARGE')
+          .reduce((sum, inv) => sum + Number(inv.total), 0);
+        const devCharges = Math.max(Number(property.developmentCharges || 0), devInvoiceTotal);
 
         const paidInstallments = installmentReceipts.reduce((sum, r) => sum + Number(r.amount), 0);
         const paidDev = devReceipts.reduce((sum, r) => sum + Number(r.amount), 0);
@@ -173,6 +191,9 @@ export class PortalService {
         const totalValue = plotPrice + devCharges;
         const totalPaid = paidInstallments + paidDev;
         const remainingTotal = remainingInstallments + remainingDev;
+
+        const plotPaidPercentage = plotPrice > 0 ? Math.min(100, Math.round((paidInstallments / plotPrice) * 100)) : 100;
+        const devPaidPercentage = devCharges > 0 ? Math.min(100, Math.round((paidDev / devCharges) * 100)) : 0;
 
         // Arrears Calculation:
         // 1. Installments past due vs paid installments
@@ -188,7 +209,10 @@ export class PortalService {
 
         const totalArrears = installmentArrears + pastDueDevInvoices;
 
+        totalValueAll += totalValue;
         totalPaidAll += totalPaid;
+        totalPlotPaidAll += paidInstallments;
+        totalDevPaidAll += paidDev;
         totalOutstandingAll += remainingTotal;
         totalArrearsAll += totalArrears;
 
@@ -213,20 +237,27 @@ export class PortalService {
             developmentCharges: devCharges,
             plotPrice,
           },
-          previousOwner, // Only Previous Owner Name and Transfer Date (no type, no cancellations)
+          previousOwner, // Only Previous Owner Name and Transfer Date
           financials: {
             totalValue,
             paid: totalPaid,
             remaining: remainingTotal,
             arrears: totalArrears,
-            // Granular breakdown
+            // Granular breakdown (with dual aliases for compatibility)
             plotPrice,
             paidInstallments,
+            plotPaid: paidInstallments,
             remainingInstallments,
+            plotRemaining: remainingInstallments,
+            plotPaidPercentage,
             isPlotPaid: remainingInstallments <= 0,
             devCharges,
+            devTotal: devCharges,
             paidDev,
+            devPaid: paidDev,
             remainingDev,
+            devRemaining: remainingDev,
+            devPaidPercentage,
             isDevPaid: devCharges > 0 ? remainingDev <= 0 : true,
           },
           installments: installments.map((i) => ({
@@ -243,7 +274,7 @@ export class PortalService {
             receiptDate: r.receivedAt,
             method: r.method,
             status: r.status === 'POSTED' ? 'PAID' : r.status,
-            category: r.category === 'DEVELOPMENT' || r.code?.startsWith('DEV-') ? 'DEVELOPMENT' : 'INSTALLMENT'
+            category: r.category === 'DEVELOPMENT' || r.code?.startsWith('DEV-') || (r.invoiceId && devInvoiceIds.has(r.invoiceId)) ? 'DEVELOPMENT' : 'INSTALLMENT'
           }))
         };
       })
@@ -260,7 +291,10 @@ export class PortalService {
         address: customer.address
       },
       summary: {
+        totalValue: totalValueAll,
         totalPaid: totalPaidAll,
+        totalPlotPaid: totalPlotPaidAll,
+        totalDevPaid: totalDevPaidAll,
         totalOutstanding: totalOutstandingAll,
         totalArrears: totalArrearsAll,
         totalProperties
