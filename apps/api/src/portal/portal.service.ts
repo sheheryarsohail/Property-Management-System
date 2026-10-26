@@ -43,7 +43,7 @@ export class PortalService {
     }
 
     // Verify PIN / Password if customer has one configured
-    const submittedSecret = (input.pin || input.password || '').trim();
+    const submittedSecret = (input.pin || input.password || (input as any).pinOrPassword || '').trim();
     if (customer.portalPassword) {
       if (!submittedSecret) {
         throw new UnauthorizedException('Please enter your Portal PIN / Password');
@@ -65,6 +65,7 @@ export class PortalService {
 
     return {
       success: true,
+      accessId,
       portalAccessId: accessId,
       customerName: customer.fullName,
       customerCode: customer.code,
