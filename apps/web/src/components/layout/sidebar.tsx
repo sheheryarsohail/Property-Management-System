@@ -30,6 +30,8 @@ import {
   GitMerge,
   PanelLeftClose,
   PanelLeftOpen,
+  Megaphone,
+  Newspaper,
 } from 'lucide-react'
 
 // --- Navigation config ---
@@ -46,6 +48,8 @@ const navigation = [
   { id: 'pdc', name: 'PDC', href: '/pdc', icon: Wallet },
   { id: 'expenses', name: 'Expenses', href: '/expenses', icon: TrendingUp },
   { id: 'reports', name: 'Reports', href: '/reports', icon: BarChart3 },
+  { id: 'announcements', name: 'Announcements', href: '/announcements', icon: Megaphone, roles: ['SUPER_ADMIN', 'ADMIN'] },
+  { id: 'blogs', name: 'Blogs & News', href: '/blogs', icon: Newspaper, roles: ['SUPER_ADMIN', 'ADMIN'] },
   // { id: 'communication', name: 'Communication', href: '/communication', icon: MessageSquare, roles: ['ADMIN', 'SALES', 'CUSTOMER'] },
   { id: 'users', name: 'Users & Access', href: '/users', icon: Users, roles: ['SUPER_ADMIN', 'ADMIN'] },
   { id: 'settings', name: 'Settings', href: '/settings', icon: Settings, roles: ['SUPER_ADMIN', 'ADMIN', 'SALES', 'ACCOUNTS', 'AUDITOR', 'CUSTOMER'] },

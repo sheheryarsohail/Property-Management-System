@@ -233,10 +233,43 @@ export const customersApi = {
   create: (data: any) => api.post('/customers', data).then(res => res.data),
   update: (id: string, data: any) => unwrap<any>(api.put(`/customers/${id}`, data)),
   delete: (id: string) => unwrap<any>(api.delete(`/customers/${id}`)),
+  updatePortalCredentials: (id: string, data: { pin?: string; password?: string }) =>
+    unwrap<any>(api.post(`/customers/${id}/portal-credentials`, data)),
 }
 
 export const portalApi = {
   get: (accessId: string) => api.get(`/portal/${accessId}`).then(res => res.data),
+  login: (data: { identifier: string; pinOrPassword: string }) =>
+    unwrap<{ accessId: string; customerId: string; customerName: string }>(api.post('/portal/login', data)),
+}
+
+export const contentApi = {
+  // Public
+  getAnnouncements: (params?: { category?: string; priority?: string }) =>
+    unwrap<any[]>(api.get('/content/announcements', { params })),
+  getBlogs: (params?: { category?: string; tag?: string }) =>
+    unwrap<any[]>(api.get('/content/blogs', { params })),
+  getBlogBySlug: (slug: string) =>
+    unwrap<any>(api.get(`/content/blogs/${slug}`)),
+
+  // Admin
+  adminListAnnouncements: (params?: any) =>
+    unwrap<any[]>(api.get('/content/admin/announcements', { params })),
+  adminCreateAnnouncement: (data: any) =>
+    unwrap<any>(api.post('/content/admin/announcements', data)),
+  adminUpdateAnnouncement: (id: string, data: any) =>
+    unwrap<any>(api.put(`/content/admin/announcements/${id}`, data)),
+  adminDeleteAnnouncement: (id: string) =>
+    unwrap<any>(api.delete(`/content/admin/announcements/${id}`)),
+
+  adminListBlogs: (params?: any) =>
+    unwrap<any[]>(api.get('/content/admin/blogs', { params })),
+  adminCreateBlog: (data: any) =>
+    unwrap<any>(api.post('/content/admin/blogs', data)),
+  adminUpdateBlog: (id: string, data: any) =>
+    unwrap<any>(api.put(`/content/admin/blogs/${id}`, data)),
+  adminDeleteBlog: (id: string) =>
+    unwrap<any>(api.delete(`/content/admin/blogs/${id}`)),
 }
 
 export const invoicesApi = {

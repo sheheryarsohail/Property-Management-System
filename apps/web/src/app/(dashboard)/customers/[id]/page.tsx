@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Header } from '@/components/layout/header'
 import { customersApi, api } from '@/lib/api'
@@ -21,7 +22,11 @@ import {
   Globe,
   Lock,
   Download,
-  ArrowLeft
+  ArrowLeft,
+  Key,
+  Copy,
+  Check,
+  ShieldCheck
 } from 'lucide-react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
@@ -29,10 +34,25 @@ import { useParams } from 'next/navigation'
 export default function CustomerDetailPage() {
   const { id } = useParams<{ id: string }>()
   const queryClient = useQueryClient()
+  const [pinInput, setPinInput] = useState('')
+  const [isEditingPin, setIsEditingPin] = useState(false)
   
   const { data: customer, isLoading } = useQuery({
     queryKey: ['customer', id],
     queryFn: () => customersApi.get(id),
+  })
+
+  const updatePinMutation = useMutation({
+    mutationFn: (pin: string) => customersApi.updatePortalCredentials(id, { pin }),
+    onSuccess: () => {
+      toast.success('Portal PIN updated successfully')
+      queryClient.invalidateQueries({ queryKey: ['customer', id] })
+      setIsEditingPin(false)
+      setPinInput('')
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.message || 'Failed to update portal PIN')
+    }
   })
 
   const togglePortalMutation = useMutation({
@@ -349,11 +369,98 @@ export default function CustomerDetailPage() {
                         }}
                         className="flex flex-1 items-center justify-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium hover:bg-slate-50"
                       >
-                        <Lock className="h-4 w-4" /> {/* Or Copy icon, but Lock is already imported */}
+                        <Lock className="h-4 w-4" />
                         Copy Link
                       </button>
                     </div>
                   </>
+                )}
+              </div>
+
+              {/* Portal Login Credentials Section */}
+              <div className="mt-5 border-t pt-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Key className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-semibold">Portal Login Credentials</span>
+                  </div>
+                  {cust.portalPassword ? (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700 border border-emerald-200">
+                      <ShieldCheck className="h-3 w-3" /> PIN Active
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-700 border border-amber-200">
+                      No PIN Configured
+                    </span>
+                  )}
+                </div>
+
+                <div className="rounded-lg bg-slate-50 p-3 text-xs space-y-1.5 border border-slate-200/80 mb-3">
+                  <div className="flex justify-between items-center text-slate-600">
+                    <span>Customer Login ID:</span>
+                    <span className="font-mono font-bold text-slate-900">{cust.code || cust.id}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-slate-600">
+                    <span>CNIC / Phone:</span>
+                    <span className="font-mono text-slate-900">{cust.cnic || cust.phone || 'N/A'}</span>
+                  </div>
+                </div>
+
+                {!isEditingPin ? (
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsEditingPin(true)
+                        setPinInput('')
+                      }}
+                      className="flex-1 rounded-lg border bg-white px-3 py-2 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50 transition-colors"
+                    >
+                      {cust.portalPassword ? 'Change Portal PIN' : 'Set Portal PIN'}
+                    </button>
+                    {cust.portalPassword && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const loginText = `SU Developers Portal Login:\nCustomer ID: ${cust.code}\nPortal Login Link: ${window.location.origin}/portal/login`
+                          navigator.clipboard.writeText(loginText)
+                          toast.success('Login info copied to clipboard')
+                        }}
+                        className="rounded-lg border bg-white px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                        title="Copy Login Details"
+                      >
+                        <Copy className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium text-slate-700">Enter New Portal PIN / Password</label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={pinInput}
+                        onChange={(e) => setPinInput(e.target.value)}
+                        placeholder="e.g. 1234 or custom PIN"
+                        className="flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-xs focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => updatePinMutation.mutate(pinInput)}
+                        disabled={!pinInput.trim() || updatePinMutation.isPending}
+                        className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                      >
+                        {updatePinMutation.isPending ? 'Saving...' : 'Save'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setIsEditingPin(false)}
+                        className="rounded-lg border px-2.5 py-1.5 text-xs text-slate-600 hover:bg-slate-50"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
                 )}
               </div>
             </div>
