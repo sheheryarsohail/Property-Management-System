@@ -16,7 +16,6 @@ import {
   Key,
   ArrowRight,
   ArrowUpRight,
-  Sparkles,
   CheckCircle2,
   Calendar,
   Phone,
@@ -24,14 +23,12 @@ import {
   MapPin,
   Menu,
   X,
-  Search,
   ChevronRight,
   FileText,
   Clock,
   Layers,
-  ChevronDown,
   Lock,
-  ExternalLink
+  Sparkles
 } from 'lucide-react'
 
 type Announcement = {
@@ -60,7 +57,7 @@ type BlogPost = {
 
 export default function HomePage() {
   const router = useRouter()
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false)
 
   // Quick Portal Access state
   const [quickId, setQuickId] = useState('')
@@ -122,7 +119,7 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans antialiased selection:bg-primary selection:text-white">
-      {/* Top Notification / Urgency Ticker (If any urgent announcement exists) */}
+      {/* Top Urgent Alert Bar (if critical announcement exists) */}
       {urgentAnnouncement && (
         <div className="bg-rose-600 text-white px-4 py-2 text-xs sm:text-sm font-medium">
           <div className="mx-auto max-w-7xl flex items-center justify-between gap-3">
@@ -142,25 +139,29 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* Navigation Bar */}
-      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-2xs">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
-          {/* Logo & Brand Identity */}
+      {/* HEADER:
+          - Non-sticky on mobile (relative)
+          - Sticky glassmorphism on desktop (sm:sticky sm:top-2)
+          - Matches dashboard header styling: bg-white/70 backdrop-blur-md border border-white/40 shadow-xs
+      */}
+      <div className="relative sm:sticky sm:top-2 z-40 mx-auto max-w-7xl px-3 sm:px-6 pt-2 sm:pt-0">
+        <header className="flex min-h-[3.75rem] items-center justify-between rounded-xl sm:rounded-2xl border border-white/60 bg-white/80 backdrop-blur-md px-4 sm:px-6 shadow-xs transition-all">
+          {/* Logo & Brand Info */}
           <Link href="/" className="flex items-center gap-3 group">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-white font-extrabold text-base shadow-sm group-hover:scale-105 transition-transform">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-white font-black text-base shadow-sm group-hover:scale-105 transition-transform">
               SU
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <span className="text-lg font-black tracking-tight text-slate-900">SU Developers</span>
-              </div>
-              <p className="text-[11px] font-medium text-slate-500">
+              <span className="text-base sm:text-lg font-black tracking-tight text-slate-900 block leading-tight">
+                SU Developers
+              </span>
+              <p className="text-[11px] font-medium text-slate-500 leading-none mt-0.5">
                 Marketed by <span className="text-primary font-semibold">SS Estate & Marketing</span>
               </p>
             </div>
           </Link>
 
-          {/* Desktop Links */}
+          {/* Desktop Navigation Links */}
           <nav className="hidden md:flex items-center gap-7 text-sm font-semibold text-slate-600">
             <a href="#announcements" className="hover:text-primary transition-colors">
               Announcements
@@ -169,17 +170,17 @@ export default function HomePage() {
               News & Milestones
             </a>
             <a href="#quick-portal" className="hover:text-primary transition-colors">
-              Portal Access
+              Plot Portal
             </a>
             <a href="#about" className="hover:text-primary transition-colors">
               About Project
             </a>
             <a href="#contact" className="hover:text-primary transition-colors">
-              Contact Desk
+              Contact
             </a>
           </nav>
 
-          {/* Actions */}
+          {/* Desktop Action Buttons */}
           <div className="hidden sm:flex items-center gap-3">
             <Link
               href="/portal/login"
@@ -190,118 +191,165 @@ export default function HomePage() {
             </Link>
             <Link
               href="/login"
-              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition shadow-2xs"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition shadow-2xs"
             >
               Staff Login
             </Link>
           </div>
 
-          {/* Mobile hamburger */}
-          <div className="flex sm:hidden items-center gap-2">
-            <Link
-              href="/portal/login"
-              className="rounded-xl bg-primary px-3 py-1.5 text-xs font-bold text-white shadow-xs"
-            >
-              Portal Login
-            </Link>
+          {/* Mobile Right: ONLY clean Hamburger Icon (Customer Portal button is cleanly inside drawer) */}
+          <div className="flex sm:hidden items-center">
             <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="rounded-xl border border-slate-200 p-2 text-slate-600 hover:bg-slate-100"
-              aria-label="Toggle Navigation"
+              type="button"
+              onClick={() => setMobileDrawerOpen(true)}
+              className="p-2 rounded-xl text-slate-700 hover:bg-slate-100 transition"
+              aria-label="Open Navigation Menu"
             >
-              {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              <Menu className="h-6 w-6" />
             </button>
           </div>
-        </div>
+        </header>
+      </div>
 
-        {/* Mobile dropdown menu */}
-        {mobileMenuOpen && (
-          <div className="sm:hidden border-b border-slate-200 bg-white px-4 py-4 space-y-3 shadow-md animate-in slide-in-from-top duration-200">
-            <a
-              href="#announcements"
-              onClick={() => setMobileMenuOpen(false)}
-              className="block text-sm font-semibold text-slate-700 py-1"
-            >
-              Announcements & Notices
-            </a>
-            <a
-              href="#updates"
-              onClick={() => setMobileMenuOpen(false)}
-              className="block text-sm font-semibold text-slate-700 py-1"
-            >
-              News & Updates
-            </a>
-            <a
-              href="#quick-portal"
-              onClick={() => setMobileMenuOpen(false)}
-              className="block text-sm font-semibold text-slate-700 py-1"
-            >
-              Check Plot Ledger
-            </a>
-            <a
-              href="#about"
-              onClick={() => setMobileMenuOpen(false)}
-              className="block text-sm font-semibold text-slate-700 py-1"
-            >
-              About Project
-            </a>
-            <a
-              href="#contact"
-              onClick={() => setMobileMenuOpen(false)}
-              className="block text-sm font-semibold text-slate-700 py-1"
-            >
-              Contact Desk
-            </a>
-            <div className="pt-3 border-t border-slate-100 flex flex-col gap-2">
-              <Link
-                href="/portal/login"
-                className="w-full text-center rounded-xl bg-primary py-2.5 text-xs font-bold text-white shadow-sm"
-              >
-                Customer Portal Login
-              </Link>
+      {/* MOBILE SLIDE-OUT DRAWER / SIDEBAR */}
+      {mobileDrawerOpen && (
+        <div className="fixed inset-0 z-50 flex justify-end animate-in fade-in duration-200">
+          {/* Backdrop Blur Overlay */}
+          <div 
+            className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs" 
+            onClick={() => setMobileDrawerOpen(false)}
+          />
+
+          {/* Slide-out Sheet Panel */}
+          <div className="relative w-full max-w-xs bg-white h-full shadow-2xl flex flex-col justify-between p-6 z-10 animate-in slide-in-from-right duration-300">
+            <div>
+              {/* Drawer Header */}
+              <div className="flex items-center justify-between pb-5 border-b border-slate-100 mb-6">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-white font-extrabold text-sm">
+                    SU
+                  </div>
+                  <div>
+                    <h3 className="text-base font-black text-slate-900 leading-tight">SU Developers</h3>
+                    <p className="text-[10px] text-slate-500 font-medium">SS Estate & Marketing</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setMobileDrawerOpen(false)}
+                  className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              {/* Prominent Customer Portal Button in Sidebar on Phone */}
+              <div className="mb-6">
+                <Link
+                  href="/portal/login"
+                  onClick={() => setMobileDrawerOpen(false)}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-bold text-white shadow-md hover:bg-primary/95 active:scale-98 transition"
+                >
+                  <User className="h-4 w-4" />
+                  Customer Portal Login
+                </Link>
+              </div>
+
+              {/* Navigation Links List */}
+              <nav className="space-y-1">
+                <a
+                  href="#announcements"
+                  onClick={() => setMobileDrawerOpen(false)}
+                  className="flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50 transition"
+                >
+                  <span>Announcements & Circulars</span>
+                  <ChevronRight className="h-4 w-4 text-slate-400" />
+                </a>
+                <a
+                  href="#updates"
+                  onClick={() => setMobileDrawerOpen(false)}
+                  className="flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50 transition"
+                >
+                  <span>News & Milestones</span>
+                  <ChevronRight className="h-4 w-4 text-slate-400" />
+                </a>
+                <a
+                  href="#quick-portal"
+                  onClick={() => setMobileDrawerOpen(false)}
+                  className="flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50 transition"
+                >
+                  <span>Check Plot Ledger</span>
+                  <ChevronRight className="h-4 w-4 text-slate-400" />
+                </a>
+                <a
+                  href="#about"
+                  onClick={() => setMobileDrawerOpen(false)}
+                  className="flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50 transition"
+                >
+                  <span>About Project</span>
+                  <ChevronRight className="h-4 w-4 text-slate-400" />
+                </a>
+                <a
+                  href="#contact"
+                  onClick={() => setMobileDrawerOpen(false)}
+                  className="flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50 transition"
+                >
+                  <span>Contact Desk</span>
+                  <ChevronRight className="h-4 w-4 text-slate-400" />
+                </a>
+              </nav>
+            </div>
+
+            {/* Bottom Drawer Actions */}
+            <div className="pt-4 border-t border-slate-100 space-y-3">
               <Link
                 href="/login"
-                className="w-full text-center rounded-xl border border-slate-200 bg-slate-50 py-2.5 text-xs font-semibold text-slate-700"
+                onClick={() => setMobileDrawerOpen(false)}
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition"
               >
+                <Lock className="h-3.5 w-3.5" />
                 Staff Admin Login
               </Link>
+              <p className="text-[11px] text-center text-slate-400">
+                SU Developers • SS Estate & Marketing
+              </p>
             </div>
           </div>
-        )}
-      </header>
+        </div>
+      )}
 
       {/* HERO BANNER SECTION */}
-      <section className="relative overflow-hidden bg-slate-900 text-white">
-        {/* Luxury Architectural Background Image */}
+      <section className="relative overflow-hidden bg-slate-900 text-white mt-2 sm:mt-4">
+        {/* Architectural Background Banner Image */}
         <div 
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-transform duration-1000 scale-105"
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
           style={{
             backgroundImage: `url('https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=2000&q=80')`,
           }}
         />
-        {/* Sleek Deep Navy / Slate Gradient Overlay matching corporate theme */}
+        {/* Rich Dark Navy Gradient Overlay */}
         <div className="absolute inset-0 bg-gradient-to-r from-slate-950/95 via-slate-900/85 to-slate-950/90" />
 
         {/* Content Container */}
-        <div className="relative z-10 mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-28 lg:py-36">
+        <div className="relative z-10 mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24 lg:py-32">
           <div className="max-w-3xl space-y-6 text-left">
             {/* Top Subtitle Badge */}
             <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3.5 py-1 text-xs font-semibold text-white backdrop-blur-md">
               <Building2 className="h-3.5 w-3.5 text-blue-400" />
-              <span>SU DEVELOPERS • PREMIER HOUSING & COMMERCIAL PROJECTS</span>
+              <span>SU DEVELOPERS • MASTER HOUSING & COMMERCIAL PROJECTS</span>
             </div>
 
-            {/* Main Title */}
+            {/* Main Headline */}
             <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight text-white leading-[1.15]">
               Building Prime Living Spaces & Visionary Communities
             </h1>
 
             {/* Description */}
-            <p className="text-base sm:text-lg text-slate-300 leading-relaxed font-normal">
-              Official digital portal for plot allocations, transparent installment ledgers, and verified development progress. Proudly developed with modern infrastructure and complete financial integrity.
+            <p className="text-sm sm:text-base lg:text-lg text-slate-300 leading-relaxed font-normal">
+              Official digital portal for plot allocations, transparent installment ledgers, and ongoing development tracking. Proudly developed with modern infrastructure and complete financial integrity.
             </p>
 
-            {/* Marketed By Banner Pill */}
+            {/* Marketed By Pill */}
             <div className="flex items-center gap-3 rounded-2xl bg-white/10 border border-white/15 p-3.5 backdrop-blur-md max-w-md">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary text-white shadow-sm font-bold">
                 SS
@@ -316,7 +364,7 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* CTA Buttons */}
+            {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3.5 pt-2">
               <Link
                 href="/portal/login"
@@ -336,12 +384,12 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Banner Quick Highlights Strip */}
-        <div className="relative z-10 border-t border-white/10 bg-slate-950/80 backdrop-blur-md py-4">
+        {/* Highlights Strip (Sitting cleanly inside the banner with zero negative margin overlapping) */}
+        <div className="relative z-10 border-t border-white/10 bg-slate-950/90 backdrop-blur-md py-4">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 grid grid-cols-2 md:grid-cols-4 gap-4 text-center sm:text-left">
             <div className="border-r border-white/10 last:border-none pr-4">
               <p className="text-xs font-semibold text-slate-400">Ledger Transparency</p>
-              <p className="text-sm sm:text-base font-bold text-white mt-0.5">100% Certified Records</p>
+              <p className="text-sm sm:text-base font-bold text-white mt-0.5">Accurate Real-Time Records</p>
             </div>
             <div className="border-r border-white/10 last:border-none pr-4">
               <p className="text-xs font-semibold text-slate-400">Development Costs</p>
@@ -352,27 +400,29 @@ export default function HomePage() {
               <p className="text-sm sm:text-base font-bold text-white mt-0.5">Instant QR & PIN Login</p>
             </div>
             <div>
-              <p className="text-xs font-semibold text-slate-400">Project Backing</p>
+              <p className="text-xs font-semibold text-slate-400">Project Management</p>
               <p className="text-sm sm:text-base font-bold text-white mt-0.5">SS Estate & Marketing</p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* QUICK PLOT STATEMENT & PORTAL LOOKUP SECTION */}
-      <section id="quick-portal" className="relative -mt-6 z-20 mx-auto max-w-7xl px-4 sm:px-6">
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 shadow-lg">
+      {/* QUICK PLOT STATEMENT & PORTAL LOOKUP SECTION
+          - Clean positive top spacing (no negative margin overlapping the banner)
+      */}
+      <section id="quick-portal" className="mx-auto max-w-7xl px-4 py-8 sm:py-12 sm:px-6">
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
             <div className="space-y-1.5 max-w-md">
               <div className="flex items-center gap-2 text-xs font-bold text-primary uppercase tracking-wider">
                 <ShieldCheck className="h-4 w-4" />
-                <span>Instant Plot Verification</span>
+                <span>Instant Plot Lookup</span>
               </div>
               <h2 className="text-xl sm:text-2xl font-black text-slate-900">
                 Check Your Plot Statement Online
               </h2>
               <p className="text-xs sm:text-sm text-slate-600">
-                Plot owners can sign in with their Customer ID, CNIC, or Mobile and Portal PIN to review verified installment ledgers.
+                Plot owners can enter their Customer ID, CNIC, or Mobile and Portal PIN to review their installment ledgers.
               </p>
             </div>
 
@@ -434,8 +484,10 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ANNOUNCEMENTS SECTION */}
-      <section id="announcements" className="mx-auto max-w-7xl px-4 py-16 sm:px-6">
+      {/* ANNOUNCEMENTS SECTION
+          - Tabs in a clean touch carousel on phone (overflow-x-auto, no wrapping)
+      */}
+      <section id="announcements" className="mx-auto max-w-7xl px-4 py-12 sm:px-6">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
           <div>
             <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-primary mb-1">
@@ -450,21 +502,23 @@ export default function HomePage() {
             </p>
           </div>
 
-          {/* Filter Pills */}
-          <div className="flex flex-wrap gap-1.5 bg-slate-200/60 p-1 rounded-xl self-start sm:self-auto">
-            {['ALL', 'URGENT', 'PAYMENT', 'DEVELOPMENT', 'GENERAL'].map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setAnnouncementFilter(cat)}
-                className={`rounded-lg px-3 py-1 text-xs font-semibold transition ${
-                  announcementFilter === cat
-                    ? 'bg-white text-primary shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                {cat}
-              </button>
-            ))}
+          {/* Touch-Friendly Category Filter Carousel (Never wraps on phone screens) */}
+          <div className="w-full sm:w-auto overflow-x-auto no-scrollbar py-1">
+            <div className="inline-flex items-center gap-1.5 bg-slate-200/70 p-1.5 rounded-xl border border-slate-200/80 shadow-2xs">
+              {['ALL', 'URGENT', 'PAYMENT', 'DEVELOPMENT', 'GENERAL'].map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setAnnouncementFilter(cat)}
+                  className={`whitespace-nowrap rounded-lg px-3.5 py-1.5 text-xs font-bold transition-all ${
+                    announcementFilter === cat
+                      ? 'bg-white text-primary shadow-xs ring-1 ring-slate-200/80'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -563,7 +617,7 @@ export default function HomePage() {
                 >
                   <div>
                     {item.coverImage ? (
-                      <div className="h-52 w-full overflow-hidden bg-slate-100 relative">
+                      <div className="h-48 sm:h-52 w-full overflow-hidden bg-slate-100 relative">
                         <img
                           src={item.coverImage}
                           alt={item.title}
@@ -611,7 +665,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* WHY CHOOSE SU DEVELOPERS / TRANSPARENCY SECTION */}
+      {/* ABOUT & STANDARDS SECTION */}
       <section id="about" className="mx-auto max-w-7xl px-4 py-16 sm:px-6">
         <div className="text-center max-w-2xl mx-auto mb-12">
           <p className="text-xs font-bold uppercase tracking-wider text-primary mb-1">
@@ -621,7 +675,7 @@ export default function HomePage() {
             Why Choose SU Developers?
           </h2>
           <p className="text-xs sm:text-sm text-slate-600 mt-2">
-            Combining verified real estate development with seamless digital governance.
+            Combining authentic real estate development with seamless digital governance.
           </p>
         </div>
 
@@ -640,7 +694,7 @@ export default function HomePage() {
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary mb-4 font-bold">
               <ShieldCheck className="h-6 w-6" />
             </div>
-            <h3 className="text-base font-bold text-slate-900">Secure Customer Portal</h3>
+            <h3 className="text-base font-bold text-slate-900">Customer Portal Access</h3>
             <p className="text-xs text-slate-600 mt-2 leading-relaxed">
               Every plot owner receives a private online dashboard to view authentic receipts and balance status 24/7.
             </p>
@@ -650,7 +704,7 @@ export default function HomePage() {
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary mb-4 font-bold">
               <Layers className="h-6 w-6" />
             </div>
-            <h3 className="text-base font-bold text-slate-900">Verified Transfer Records</h3>
+            <h3 className="text-base font-bold text-slate-900">Ownership Transfer History</h3>
             <p className="text-xs text-slate-600 mt-2 leading-relaxed">
               Authenticated ownership chain displaying genuine transfer dates and past owner records transparently.
             </p>
@@ -688,10 +742,6 @@ export default function HomePage() {
               <p className="text-xs text-slate-400 leading-relaxed max-w-sm">
                 SU Developers is committed to delivering premier master-planned housing communities and commercial developments with certified digital ledgers and genuine trust.
               </p>
-              <div className="inline-flex items-center gap-2 rounded-xl bg-white/5 border border-white/10 px-3.5 py-1.5 text-xs text-emerald-400 font-medium">
-                <CheckCircle2 className="h-4 w-4" />
-                Verified Real Estate Project
-              </div>
             </div>
 
             {/* Quick Links */}
@@ -705,7 +755,7 @@ export default function HomePage() {
               </ul>
             </div>
 
-            {/* Marketing Assistance Desk */}
+            {/* Assistance Desk */}
             <div className="md:col-span-4 space-y-3">
               <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300">
                 Customer Assistance Desk

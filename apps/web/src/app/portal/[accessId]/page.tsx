@@ -42,7 +42,7 @@ export default function CustomerPortalPage() {
           <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary/20 border-t-primary" />
           <div className="space-y-1">
             <h2 className="text-base font-bold text-slate-800">SU Developers</h2>
-            <p className="text-xs text-slate-500">Loading verified customer portal...</p>
+            <p className="text-xs text-slate-500">Loading customer portal...</p>
           </div>
         </div>
       </div>
@@ -84,20 +84,17 @@ export default function CustomerPortalPage() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 antialiased font-sans selection:bg-primary selection:text-white">
       {/* Top Header Bar */}
-      <header className="sticky top-0 z-40 bg-white border-b border-slate-200 shadow-2xs">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
+      <div className="relative sm:sticky sm:top-2 z-40 mx-auto max-w-6xl px-3 sm:px-6 pt-2 sm:pt-0">
+        <header className="flex min-h-[3.75rem] items-center justify-between rounded-xl sm:rounded-2xl border border-white/60 bg-white/80 backdrop-blur-md px-4 sm:px-6 shadow-xs transition-all">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-white font-extrabold text-base shadow-sm">
               SU
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <span className="text-base font-extrabold tracking-tight text-slate-900">SU Developers</span>
-                <span className="hidden sm:inline-flex rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
-                  Verified Portal
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-500">
+              <span className="text-base font-extrabold tracking-tight text-slate-900 block leading-tight">
+                SU Developers
+              </span>
+              <p className="text-[11px] text-slate-500 leading-none mt-0.5">
                 Marketed & Managed by <span className="font-semibold text-primary">SS Estate & Marketing</span>
               </p>
             </div>
@@ -120,8 +117,8 @@ export default function CustomerPortalPage() {
               <span className="hidden sm:inline">Exit</span>
             </Link>
           </div>
-        </div>
-      </header>
+        </header>
+      </div>
 
       {/* Main Content Area */}
       <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 space-y-8">
@@ -279,7 +276,7 @@ export default function CustomerPortalPage() {
                         </div>
                         <div>
                           <h4 className="text-xs font-bold uppercase tracking-wider text-blue-900">
-                            Verified Ownership Transfer Record
+                            Ownership Transfer Record
                           </h4>
                           <p className="text-sm font-medium text-slate-800 mt-0.5">
                             Transferred from <span className="font-bold text-slate-900">{previousOwner.previousOwnerName}</span> on{' '}
@@ -314,18 +311,18 @@ export default function CustomerPortalPage() {
                         )}
                       </div>
 
-                      <div className="grid grid-cols-3 gap-2 text-center mb-4">
-                        <div className="rounded-lg bg-white p-3 border border-slate-200 shadow-2xs">
-                          <p className="text-[10px] uppercase font-bold text-slate-500">Total Price</p>
-                          <p className="text-sm font-bold text-slate-900 mt-1">{formatCurrency(financials.plotPrice)}</p>
+                      <div className="grid grid-cols-3 gap-1.5 sm:gap-2 text-center mb-4">
+                        <div className="rounded-lg bg-white p-2 sm:p-3 border border-slate-200 shadow-2xs">
+                          <p className="text-[9px] sm:text-[10px] uppercase font-bold text-slate-500">Total Price</p>
+                          <p className="text-xs sm:text-sm font-bold text-slate-900 mt-0.5 sm:mt-1 truncate">{formatCurrency(financials.plotPrice)}</p>
                         </div>
-                        <div className="rounded-lg bg-white p-3 border border-slate-200 shadow-2xs">
-                          <p className="text-[10px] uppercase font-bold text-slate-500">Total Paid</p>
-                          <p className="text-sm font-bold text-emerald-600 mt-1">{formatCurrency(financials.plotPaid)}</p>
+                        <div className="rounded-lg bg-white p-2 sm:p-3 border border-slate-200 shadow-2xs">
+                          <p className="text-[9px] sm:text-[10px] uppercase font-bold text-slate-500">Total Paid</p>
+                          <p className="text-xs sm:text-sm font-bold text-emerald-600 mt-0.5 sm:mt-1 truncate">{formatCurrency(financials.plotPaid)}</p>
                         </div>
-                        <div className="rounded-lg bg-white p-3 border border-slate-200 shadow-2xs">
-                          <p className="text-[10px] uppercase font-bold text-slate-500">Remaining</p>
-                          <p className="text-sm font-bold text-slate-700 mt-1">
+                        <div className="rounded-lg bg-white p-2 sm:p-3 border border-slate-200 shadow-2xs">
+                          <p className="text-[9px] sm:text-[10px] uppercase font-bold text-slate-500">Remaining</p>
+                          <p className="text-xs sm:text-sm font-bold text-slate-700 mt-0.5 sm:mt-1 truncate">
                             {formatCurrency(Math.max(0, financials.plotRemaining))}
                           </p>
                         </div>
@@ -341,7 +338,7 @@ export default function CustomerPortalPage() {
                     </div>
 
                     {/* 2. Development Charges Card */}
-                    <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-5">
+                    <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4 sm:p-5">
                       <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-2">
                           <div className="h-2.5 w-2.5 rounded-full bg-primary" />
@@ -354,18 +351,18 @@ export default function CustomerPortalPage() {
                         </span>
                       </div>
 
-                      <div className="grid grid-cols-3 gap-2 text-center mb-4">
-                        <div className="rounded-lg bg-white p-3 border border-slate-200 shadow-2xs">
-                          <p className="text-[10px] uppercase font-bold text-slate-500">Total Dev</p>
-                          <p className="text-sm font-bold text-slate-900 mt-1">{formatCurrency(financials.devTotal)}</p>
+                      <div className="grid grid-cols-3 gap-1.5 sm:gap-2 text-center mb-4">
+                        <div className="rounded-lg bg-white p-2 sm:p-3 border border-slate-200 shadow-2xs">
+                          <p className="text-[9px] sm:text-[10px] uppercase font-bold text-slate-500">Total Dev</p>
+                          <p className="text-xs sm:text-sm font-bold text-slate-900 mt-0.5 sm:mt-1 truncate">{formatCurrency(financials.devTotal)}</p>
                         </div>
-                        <div className="rounded-lg bg-white p-3 border border-slate-200 shadow-2xs">
-                          <p className="text-[10px] uppercase font-bold text-slate-500">Paid Dev</p>
-                          <p className="text-sm font-bold text-blue-600 mt-1">{formatCurrency(financials.devPaid)}</p>
+                        <div className="rounded-lg bg-white p-2 sm:p-3 border border-slate-200 shadow-2xs">
+                          <p className="text-[9px] sm:text-[10px] uppercase font-bold text-slate-500">Paid Dev</p>
+                          <p className="text-xs sm:text-sm font-bold text-blue-600 mt-0.5 sm:mt-1 truncate">{formatCurrency(financials.devPaid)}</p>
                         </div>
-                        <div className="rounded-lg bg-white p-3 border border-slate-200 shadow-2xs">
-                          <p className="text-[10px] uppercase font-bold text-slate-500">Remaining</p>
-                          <p className="text-sm font-bold text-slate-700 mt-1">
+                        <div className="rounded-lg bg-white p-2 sm:p-3 border border-slate-200 shadow-2xs">
+                          <p className="text-[9px] sm:text-[10px] uppercase font-bold text-slate-500">Remaining</p>
+                          <p className="text-xs sm:text-sm font-bold text-slate-700 mt-0.5 sm:mt-1 truncate">
                             {formatCurrency(Math.max(0, financials.devRemaining))}
                           </p>
                         </div>
@@ -399,7 +396,7 @@ export default function CustomerPortalPage() {
                         </h5>
                       </div>
                       <span className="text-xs font-medium text-slate-500">
-                        Official Receipts Verified
+                        Official Receipts
                       </span>
                     </div>
 
@@ -444,7 +441,7 @@ export default function CustomerPortalPage() {
                                 +{formatCurrency(r.amount)}
                               </p>
                               <span className="inline-block text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                                {r.status === 'POSTED' ? 'VERIFIED' : r.status}
+                                {r.status === 'POSTED' ? 'PAID' : r.status}
                               </span>
                             </div>
                           </div>
@@ -467,7 +464,7 @@ export default function CustomerPortalPage() {
             Questions regarding your plot statement or payment schedule?
           </h3>
           <p className="text-xs sm:text-sm text-slate-600 max-w-xl mx-auto leading-relaxed">
-            Please reach out to our client desk at SS Estate & Marketing for any balance reconciliations, receipt verifications, or transfer documentation.
+            Please reach out to our client desk at SS Estate & Marketing for any balance reconciliations, receipt inquiries, or transfer documentation.
           </p>
           <div className="pt-2 text-xs text-slate-400">
             SU Developers • Marketed & Managed by SS Estate & Marketing

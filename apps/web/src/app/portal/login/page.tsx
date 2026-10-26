@@ -56,15 +56,15 @@ export default function CustomerPortalLoginPage() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col justify-between selection:bg-primary selection:text-white font-sans">
       {/* Top Header */}
-      <header className="border-b border-slate-200 bg-white shadow-2xs">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
+      <div className="relative sm:sticky sm:top-2 z-40 mx-auto max-w-6xl px-3 sm:px-6 pt-2 sm:pt-0 w-full">
+        <header className="flex min-h-[3.75rem] items-center justify-between rounded-xl sm:rounded-2xl border border-white/60 bg-white/80 backdrop-blur-md px-4 sm:px-6 shadow-xs transition-all">
           <Link href="/" className="flex items-center gap-3 group">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-white font-black text-base shadow-sm">
               SU
             </div>
             <div>
-              <span className="text-base font-extrabold tracking-tight text-slate-900 block">SU Developers</span>
-              <span className="text-[10px] text-slate-500 block -mt-0.5">
+              <span className="text-base font-extrabold tracking-tight text-slate-900 block leading-tight">SU Developers</span>
+              <span className="text-[10px] text-slate-500 block mt-0.5">
                 Marketed by SS Estate & Marketing
               </span>
             </div>
@@ -72,13 +72,13 @@ export default function CustomerPortalLoginPage() {
 
           <Link
             href="/"
-            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition shadow-2xs"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white/90 px-3.5 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition shadow-2xs"
           >
             <Home className="h-3.5 w-3.5" />
             <span>Back to Home</span>
           </Link>
-        </div>
-      </header>
+        </header>
+      </div>
 
       {/* Main Login Area */}
       <main className="flex-1 flex items-center justify-center px-4 py-12 sm:px-6">
@@ -138,7 +138,7 @@ export default function CustomerPortalLoginPage() {
                   disabled={isLoading}
                   className="w-full flex items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-bold text-white shadow-sm hover:bg-primary/90 active:scale-98 transition disabled:opacity-50"
                 >
-                  {isLoading ? 'Verifying...' : 'Access My Portal'}
+                  {isLoading ? 'Signing in...' : 'Access My Portal'}
                   <ArrowRight className="h-4 w-4" />
                 </button>
               </div>
