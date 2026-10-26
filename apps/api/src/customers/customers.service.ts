@@ -46,9 +46,37 @@ export class CustomersService {
     });
   }
 
+  private async generateNextCustomerCode(tenantId: string): Promise<string> {
+    const customers = await this.prisma.customer.findMany({
+      where: {
+        tenantId,
+        code: { startsWith: 'CUST-' },
+      },
+      select: { code: true },
+    });
+
+    let maxNum = 0;
+    for (const c of customers) {
+      const match = c.code.match(/^CUST-(\d+)$/);
+      if (match) {
+        const num = parseInt(match[1], 10);
+        if (num > maxNum) maxNum = num;
+      }
+    }
+
+    let nextNum = maxNum + 1;
+    let candidate = `CUST-${String(nextNum).padStart(4, '0')}`;
+
+    while (await this.prisma.customer.findFirst({ where: { tenantId, code: candidate } })) {
+      nextNum++;
+      candidate = `CUST-${String(nextNum).padStart(4, '0')}`;
+    }
+
+    return candidate;
+  }
+
   async create(tenantId: string, input: CreateCustomerDto) {
-    const count = await this.prisma.customer.count({ where: { tenantId } });
-    const code = `CUST-${String(count + 1).padStart(4, '0')}`;
+    const code = await this.generateNextCustomerCode(tenantId);
 
     return this.prisma.customer.create({
       data: {
