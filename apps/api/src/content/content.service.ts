@@ -47,35 +47,57 @@ export class ContentService {
     return item;
   }
 
+  private parseDate(val: any): Date | null {
+    if (!val) return null;
+    const d = new Date(val);
+    return isNaN(d.getTime()) ? null : d;
+  }
+
   async createAnnouncement(tenantId: string, authorId: string | undefined, data: any) {
+    let validAuthorId: string | null = null;
+    if (authorId) {
+      const user = await this.prisma.user.findUnique({ where: { id: authorId }, select: { id: true } });
+      if (user) validAuthorId = user.id;
+    }
+
+    const publishedAt = this.parseDate(data.publishedAt) || new Date();
+    const expiresAt = this.parseDate(data.expiresAt);
+
     return this.prisma.announcement.create({
       data: {
         tenantId,
-        authorId,
+        authorId: validAuthorId,
         title: data.title,
         content: data.content,
         category: data.category || 'General',
         priority: data.priority || 'NORMAL',
-        isPublished: data.isPublished !== undefined ? data.isPublished : true,
-        publishedAt: data.publishedAt ? new Date(data.publishedAt) : new Date(),
-        expiresAt: data.expiresAt ? new Date(data.expiresAt) : null,
+        isPublished: data.isPublished !== undefined ? Boolean(data.isPublished) : true,
+        publishedAt,
+        expiresAt,
       }
     });
   }
 
   async updateAnnouncement(tenantId: string, id: string, data: any) {
     await this.getAnnouncement(tenantId, id);
+    const updateData: any = {};
+
+    if (data.title !== undefined) updateData.title = data.title;
+    if (data.content !== undefined) updateData.content = data.content;
+    if (data.category !== undefined) updateData.category = data.category;
+    if (data.priority !== undefined) updateData.priority = data.priority;
+    if (data.isPublished !== undefined) updateData.isPublished = Boolean(data.isPublished);
+    if (data.publishedAt !== undefined) {
+      const pDate = this.parseDate(data.publishedAt);
+      if (pDate) updateData.publishedAt = pDate;
+    }
+    if (data.expiresAt !== undefined) {
+      updateData.expiresAt = this.parseDate(data.expiresAt);
+    }
+
     return this.prisma.announcement.update({
       where: { id },
-      data: {
-        title: data.title,
-        content: data.content,
-        category: data.category,
-        priority: data.priority,
-        isPublished: data.isPublished,
-        publishedAt: data.publishedAt ? new Date(data.publishedAt) : undefined,
-        expiresAt: data.expiresAt !== undefined ? (data.expiresAt ? new Date(data.expiresAt) : null) : undefined,
-      }
+      data: updateData,
     });
   }
 
@@ -160,10 +182,18 @@ export class ContentService {
       slug = `${slug}-${Date.now().toString().slice(-4)}`;
     }
 
+    let validAuthorId: string | null = null;
+    if (authorId) {
+      const user = await this.prisma.user.findUnique({ where: { id: authorId }, select: { id: true } });
+      if (user) validAuthorId = user.id;
+    }
+
+    const publishedAt = this.parseDate(data.publishedAt) || new Date();
+
     return this.prisma.blogPost.create({
       data: {
         tenantId,
-        authorId,
+        authorId: validAuthorId,
         title: data.title,
         slug,
         excerpt: data.excerpt || null,
@@ -171,8 +201,8 @@ export class ContentService {
         coverImage: data.coverImage || null,
         category: data.category || 'Real Estate',
         tags: Array.isArray(data.tags) ? data.tags : [],
-        isPublished: data.isPublished !== undefined ? data.isPublished : true,
-        publishedAt: data.publishedAt ? new Date(data.publishedAt) : new Date(),
+        isPublished: data.isPublished !== undefined ? Boolean(data.isPublished) : true,
+        publishedAt,
       }
     });
   }
@@ -190,19 +220,23 @@ export class ContentService {
       }
     }
 
+    const updateData: any = {};
+    if (data.title !== undefined) updateData.title = data.title;
+    if (slug) updateData.slug = slug;
+    if (data.excerpt !== undefined) updateData.excerpt = data.excerpt;
+    if (data.content !== undefined) updateData.content = data.content;
+    if (data.coverImage !== undefined) updateData.coverImage = data.coverImage;
+    if (data.category !== undefined) updateData.category = data.category;
+    if (data.tags !== undefined) updateData.tags = Array.isArray(data.tags) ? data.tags : [];
+    if (data.isPublished !== undefined) updateData.isPublished = Boolean(data.isPublished);
+    if (data.publishedAt !== undefined) {
+      const pDate = this.parseDate(data.publishedAt);
+      if (pDate) updateData.publishedAt = pDate;
+    }
+
     return this.prisma.blogPost.update({
       where: { id },
-      data: {
-        title: data.title,
-        slug,
-        excerpt: data.excerpt !== undefined ? data.excerpt : undefined,
-        content: data.content,
-        coverImage: data.coverImage !== undefined ? data.coverImage : undefined,
-        category: data.category,
-        tags: Array.isArray(data.tags) ? data.tags : undefined,
-        isPublished: data.isPublished,
-        publishedAt: data.publishedAt ? new Date(data.publishedAt) : undefined,
-      }
+      data: updateData,
     });
   }
 
