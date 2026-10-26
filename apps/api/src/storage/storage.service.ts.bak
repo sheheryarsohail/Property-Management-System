@@ -1,0 +1,440 @@
+// src/storage/storage.service.ts
+import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  S3Client,
+  PutObjectCommand,
+  GetObjectCommand,
+  HeadObjectCommand,
+  DeleteObjectCommand,
+} from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import * as fs from 'node:fs/promises';
+import * as fss from 'node:fs';
+import * as path from 'node:path';
+import { createHash } from 'crypto';
+import { PrismaService } from '../../prisma/prisma.service';
+
+function isTrue(v?: string) {
+  return v === '1' || v === 'true';
+}
+
+type StoragePutResult = {
+  id: string;
+  key: string;
+  sha256: string;
+  size: number;
+  contentType: string;
+  url?: string;
+  deduped: boolean;
+  expiresAt: string | null;
+  mode: 's3' | 'local';
+};
+
+type PutOpts = {
+  tenantId: string;         // required: multi-tenant scoping (dedupe/idempotency)
+  contentType: string;      // required: e.g., application/pdf
+  ttlDays?: number;         // optional: DB TTL (use S3 lifecycle for blob)
+  keyHint?: string;         // optional: suffix, e.g., invoice-123.pdf
+  idempotencyKey?: string;  // optional: exactly-once semantics
+  public?: boolean;         // reserved
+};
+
+@Injectable()
+export class StorageService {
+  private readonly useS3: boolean;
+  private readonly s3?: S3Client;
+  private readonly bucket?: string;
+  private readonly localRoot: string;
+  ping: any;
+
+  constructor(private readonly prisma: PrismaService) {
+    this.useS3 =
+      !!process.env.S3_BUCKET &&
+      !!process.env.S3_ACCESS_KEY_ID &&
+      !!process.env.S3_SECRET_ACCESS_KEY;
+
+    this.localRoot = process.env.LOCAL_STORAGE_DIR || path.join(process.cwd(), 'var', 'storage');
+
+    if (this.useS3) {
+      this.s3 = new S3Client({
+        region: process.env.S3_REGION || 'us-east-1',
+        endpoint: process.env.S3_ENDPOINT || undefined,
+        forcePathStyle: isTrue(process.env.S3_FORCE_PATH_STYLE) || undefined,
+        credentials: {
+          accessKeyId: process.env.S3_ACCESS_KEY_ID!,
+          secretAccessKey: process.env.S3_SECRET_ACCESS_KEY!,
+        },
+      });
+      this.bucket = process.env.S3_BUCKET!;
+    } else {
+      if (!fss.existsSync(this.localRoot)) {
+        fss.mkdirSync(this.localRoot, { recursive: true });
+      }
+    }
+  }
+
+  // ───────────────────────── helpers ─────────────────────────
+
+  private normalizeKey(key: string) {
+    return key.replace(/^\/+/, '');
+  }
+
+  private sha256(buf: Buffer): string {
+    const h = createHash('sha256');
+    h.update(buf);
+    return h.digest('hex');
+  }
+
+  private buildKey(params: { tenantId: string; sha256: string; keyHint?: string }) {
+    const base = `${params.tenantId}/${params.sha256}`;
+    if (!params.keyHint) return base;
+    const safe = params.keyHint.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 100);
+    return `${base}/${safe}`;
+  }
+
+  private publicUrl(key: string): string | undefined {
+    const base = process.env.STORAGE_PUBLIC_BASE_URL;
+    if (!base) return undefined;
+    return `${base.replace(/\/$/, '')}/${encodeURI(key)}`;
+  }
+
+  private guessContentType(key: string) {
+    const k = key.toLowerCase();
+    if (k.endsWith('.pdf')) return 'application/pdf';
+    if (k.endsWith('.json')) return 'application/json';
+    if (k.endsWith('.txt')) return 'text/plain; charset=utf-8';
+    return 'application/octet-stream';
+  }
+
+  private weakEtagFromStat(size: number, mtimeMs: number) {
+    return `W/"${size.toString(16)}-${Math.floor(mtimeMs).toString(16)}"`;
+  }
+
+  private async writeBlob(key: string, data: Buffer, contentType: string) {
+    key = this.normalizeKey(key);
+    if (this.useS3 && this.s3 && this.bucket) {
+      await this.s3.send(
+        new PutObjectCommand({
+          Bucket: this.bucket,
+          Key: key,
+          Body: data,
+          ContentType: contentType,
+          ACL: 'private',
+        }),
+      );
+    } else {
+      const full = path.join(this.localRoot, key);
+      await fs.mkdir(path.dirname(full), { recursive: true });
+      await fs.writeFile(full, data);
+    }
+  }
+
+  // ───────────────────── idempotent + dedupe write ─────────────────────
+
+  /**
+   * Idempotent, deduped object write (S3 or local) with rehydrate:
+   * 1) DEDUPE by (tenantId, sha256) → if row exists, ensure blob exists (rehydrate if missing).
+   * 2) IDEMPOTENCY replay → verify blob exists (rehydrate if missing).
+   * 3) NEW write → insert FileObject, upsert idempotency replay.
+   */
+  async putObjectIdempotent(data: Buffer, opts: PutOpts): Promise<StoragePutResult> {
+    if (!opts?.tenantId) throw new BadRequestException('tenantId is required');
+    if (!opts?.contentType) throw new BadRequestException('contentType is required');
+
+    const sha = this.sha256(data);
+
+    // 1) DEDUPE path first (preferred)
+    const existing = await this.prisma.fileObject.findFirst({
+      where: { tenantId: opts.tenantId, sha256: sha },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    if (existing) {
+      const stillThere = await this.exists(existing.key);
+      if (!stillThere) {
+        await this.writeBlob(existing.key, data, opts.contentType);
+        if (existing.size !== data.byteLength || existing.contentType !== opts.contentType) {
+          await this.prisma.fileObject.update({
+            where: { id: existing.id },
+            data: { size: data.byteLength, contentType: opts.contentType },
+          });
+        }
+        console.warn(`[storage] restored missing blob for key=${existing.key}`);
+      }
+
+      const response: StoragePutResult = {
+        id: existing.id,
+        key: existing.key,
+        sha256: existing.sha256,
+        size: existing.size,
+        contentType: existing.contentType,
+        url: this.publicUrl(existing.key),
+        deduped: true,
+        expiresAt: existing.expiresAt ? existing.expiresAt.toISOString() : null,
+        mode: this.useS3 ? 's3' : 'local',
+      };
+
+      // 🟢 Record idempotency without overwriting prior response
+      if (opts.idempotencyKey) {
+        await this.prisma.idempotencyKey.upsert({
+          where: { key: opts.idempotencyKey },
+          create: { key: opts.idempotencyKey, response, tenantId: opts.tenantId },
+          update: {}, // do NOT overwrite existing response on dedupe path
+        });
+      }
+      return response;
+    }
+
+    // 2) IDEMPOTENCY replay (no dedupe row): verify/rehydrate before returning
+    if (opts.idempotencyKey) {
+      const idem = await this.prisma.idempotencyKey.findUnique({
+        where: { key: opts.idempotencyKey },
+      });
+      if (idem?.response) {
+        const resp = idem.response as StoragePutResult;
+        const ok = await this.exists(resp.key);
+        if (!ok) {
+          await this.writeBlob(resp.key, data, opts.contentType);
+          // ensure fileObject row exists/updated
+          await this.prisma.fileObject.upsert({
+            where: { key: resp.key },
+            create: {
+              key: resp.key,
+              sha256: sha,
+              size: data.byteLength,
+              contentType: opts.contentType,
+              tenantId: opts.tenantId,
+              expiresAt: null,
+            },
+            update: { size: data.byteLength, contentType: opts.contentType, sha256: sha },
+          });
+          console.warn(`[storage] restored missing blob from idempotency for key=${resp.key}`);
+        }
+        return resp;
+      }
+    }
+
+    // 3) NEW write
+    const key = this.buildKey({ tenantId: opts.tenantId, sha256: sha, keyHint: opts.keyHint });
+    await this.writeBlob(key, data, opts.contentType);
+
+    const expiresAtDate =
+      typeof opts.ttlDays === 'number'
+        ? new Date(Date.now() + opts.ttlDays * 86_400_000)
+        : null;
+
+    const row = await this.prisma.fileObject.create({
+      data: {
+        key,
+        sha256: sha,
+        size: data.byteLength,
+        contentType: opts.contentType,
+        tenantId: opts.tenantId,
+        expiresAt: expiresAtDate ?? undefined,
+      },
+    });
+
+    const response: StoragePutResult = {
+      id: row.id,
+      key,
+      sha256: sha,
+      size: data.byteLength,
+      contentType: opts.contentType,
+      url: this.publicUrl(key),
+      deduped: false,
+      expiresAt: row.expiresAt ? row.expiresAt.toISOString() : null,
+      mode: this.useS3 ? 's3' : 'local',
+    };
+
+    // 🟢 New write: safe to store/overwrite idempotency response
+if (opts.idempotencyKey) {
+  await this.prisma.idempotencyKey.upsert({
+    where:  { key: opts.idempotencyKey },
+    create: { key: opts.idempotencyKey, response, tenantId: opts.tenantId },
+    update: { response, tenantId: opts.tenantId },
+  });
+}
+
+
+    return response;
+  }
+
+  /** Convenience for PDFs – same as putObjectIdempotent with application/pdf */
+  async putPdfIdempotent(
+    data: Buffer,
+    opts: Omit<PutOpts, 'contentType'>,
+  ): Promise<StoragePutResult> {
+    return this.putObjectIdempotent(data, { ...opts, contentType: 'application/pdf' });
+  }
+
+  // ───────────────────── direct write / existence ─────────────────────
+
+  async putPdf(key: string, buf: Buffer, contentType = 'application/pdf'): Promise<void> {
+    await this.writeBlob(key, buf, contentType);
+  }
+
+  async exists(key: string): Promise<boolean> {
+    key = this.normalizeKey(key);
+    if (this.useS3 && this.s3 && this.bucket) {
+      try {
+        await this.s3.send(new HeadObjectCommand({ Bucket: this.bucket, Key: key }));
+        return true;
+      } catch {
+        return false;
+      }
+    }
+    try {
+      await fs.access(path.join(this.localRoot, key));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async get(key: string): Promise<Buffer | null> {
+    try {
+      return await this.read(key);
+    } catch {
+      return null;
+    }
+  }
+
+  /** Read object as Buffer (throws 404 on missing) */
+  async read(key: string): Promise<Buffer> {
+    key = this.normalizeKey(key);
+    if (this.useS3 && this.s3 && this.bucket) {
+      const out = await this.s3.send(new GetObjectCommand({ Bucket: this.bucket, Key: key }));
+      const body = out.Body as any; // Node.js Readable
+      const chunks: Buffer[] = [];
+      await new Promise<void>((resolve, reject) => {
+        body.on('data', (c: Buffer) => chunks.push(c));
+        body.on('end', resolve);
+        body.on('error', reject);
+      });
+      return Buffer.concat(chunks);
+    }
+    const full = path.join(this.localRoot, key);
+    try {
+      return await fs.readFile(full);
+    } catch {
+      throw new NotFoundException(`Object not found: ${key}`);
+    }
+  }
+
+  /** Read object as stream + metadata (Content-Type, ETag) */
+  async readStream(
+    key: string,
+  ): Promise<{ stream: NodeJS.ReadableStream; contentType?: string; etag?: string }> {
+    key = this.normalizeKey(key);
+
+    if (this.useS3 && this.s3 && this.bucket) {
+      const out = await this.s3.send(new GetObjectCommand({ Bucket: this.bucket, Key: key }));
+      const stream = out.Body as NodeJS.ReadableStream;
+      const contentType = out.ContentType || this.guessContentType(key);
+      const etag = typeof out.ETag === 'string' ? out.ETag : undefined;
+      return { stream, contentType, etag };
+    }
+
+    const full = path.join(this.localRoot, key);
+    let stat;
+    try {
+      stat = await fs.stat(full);
+    } catch (e: any) {
+      if (e?.code === 'ENOENT') throw new NotFoundException(`Object not found: ${key}`);
+      throw e;
+    }
+    const etag = this.weakEtagFromStat(stat.size, stat.mtimeMs);
+    return {
+      stream: fss.createReadStream(full),
+      contentType: this.guessContentType(key),
+      etag,
+    };
+  }
+
+  /**
+   * Presigned GET URL:
+   *  - S3: real presigned URL
+   *  - Local: if STORAGE_PUBLIC_BASE_URL or PUBLIC_BASE_URL is set, returns app URL to /storage/objects/:key (still requires API key)
+   */
+  async presignGet(key: string, expiresInSec = 300): Promise<string> {
+    key = this.normalizeKey(key);
+    if (this.useS3 && this.s3 && this.bucket) {
+      const cmd = new GetObjectCommand({ Bucket: this.bucket, Key: key });
+      return getSignedUrl(this.s3, cmd, { expiresIn: expiresInSec });
+    }
+
+    const base =
+      process.env.STORAGE_PUBLIC_BASE_URL ||
+      process.env.PUBLIC_BASE_URL ||
+      undefined;
+
+    if (base) {
+      const baseClean = base.replace(/\/$/, '');
+      const encoded = encodeURIComponent(key);
+      return `${baseClean}/storage/objects/${encoded}`;
+    }
+
+    throw new Error('presignGet is only available in S3 mode');
+  }
+
+  // ── Aliases to keep older controller code working ────────────────────────────
+  async uploadFile(key: string, buf: Buffer, contentType = 'application/pdf'): Promise<void> {
+    return this.putPdf(key, buf, contentType);
+  }
+
+  async getSignedUrl(key: string, expiresInSec = 300, _opts?: unknown): Promise<string> {
+    return this.presignGet(key, expiresInSec);
+  }
+
+  /** Health for diagnostics */
+  async health(): Promise<{
+    ok: boolean;
+    mode: 's3' | 'local';
+    bucket?: string;
+    endpoint?: string;
+    error?: string;
+  }> {
+    if (this.useS3 && this.s3 && this.bucket) {
+      try {
+        await this.s3.config.credentials();
+        return {
+          ok: true,
+          mode: 's3',
+          bucket: this.bucket,
+          endpoint: process.env.S3_ENDPOINT || undefined,
+        };
+      } catch (e: any) {
+        return {
+          ok: false,
+          mode: 's3',
+          bucket: this.bucket,
+          endpoint: process.env.S3_ENDPOINT || undefined,
+          error: e?.message || String(e),
+        };
+      }
+    }
+    try {
+      const test = path.join(this.localRoot, '.health');
+      await fs.mkdir(this.localRoot, { recursive: true });
+      await fs.writeFile(test, 'ok').catch(() => {});
+      await fs.unlink(test).catch(() => {});
+      return { ok: true, mode: 'local' };
+    } catch (e: any) {
+      return { ok: false, mode: 'local', error: e?.message || String(e) };
+    }
+  }
+
+  /** Hard delete blob + metadata */
+  async delete(key: string): Promise<{ ok: true }> {
+    key = this.normalizeKey(key);
+    if (this.useS3 && this.s3 && this.bucket) {
+      await this.s3.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key }));
+    } else {
+      const full = path.join(this.localRoot, key);
+      await fs.rm(full, { force: true });
+    }
+    // Also purge DB metadata so dedupe won't point to a missing blob later
+    await this.prisma.fileObject.deleteMany({ where: { key } });
+    return { ok: true };
+  }
+}

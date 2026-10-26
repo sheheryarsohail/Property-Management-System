@@ -1,0 +1,163 @@
+version: "3.9"
+
+networks:
+  pmsnet:
+
+volumes:
+  pgdata:
+  minio_data:
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: pms_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: pms
+      POSTGRES_PASSWORD: pms
+      POSTGRES_DB: pms
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pms -d pms"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    networks: [pmsnet]
+
+  redis:
+    image: redis:7
+    container_name: pms_redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    networks: [pmsnet]
+
+  minio:
+    image: minio/minio:latest
+    container_name: pms_minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: pms
+      MINIO_ROOT_PASSWORD: pms12345
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/ready"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    networks: [pmsnet]
+
+  minio-init:
+    image: minio/mc:latest
+    container_name: pms_minio_init
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MC_HOST_minio: http://pms:pms12345@minio:9000
+    entrypoint: >
+      /bin/sh -c "
+      mc mb -p minio/pms-dev || true &&
+      mc anonymous set none minio/pms-dev || true &&
+      echo 'minio init done'
+      "
+    restart: "no"
+    networks: [pmsnet]
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: pms_api
+    restart: unless-stopped
+    env_file:
+      - apps/api/.env
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://pms:pms@postgres:5432/pms?schema=public
+      REDIS_URL: redis://redis:6379
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_DB: "0"
+      PORT: "3000"
+      HOST: 0.0.0.0
+      S3_ENDPOINT: http://minio:9000
+      S3_BUCKET: pms-dev
+      S3_ACCESS_KEY_ID: pms
+      S3_SECRET_ACCESS_KEY: pms12345
+      S3_REGION: us-east-1
+      S3_FORCE_PATH_STYLE: "true"
+      QUEUE_PREFIX: pms
+      PDF_JOB_ATTEMPTS: "4"
+      PDF_JOB_BACKOFF_MS: "30000"
+      # Optional prefix for all routes (blank by default)
+      # API_PREFIX:
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+    ports:
+      - "3000:3000"
+    working_dir: /app
+    command: ["sh","-lc","if [ -f apps/api/dist/main.js ]; then node -r reflect-metadata apps/api/dist/main.js; elif [ -f apps/api/dist/src/main.js ]; then node -r reflect-metadata apps/api/dist/src/main.js; else echo '❌ dist output not found'; ls -R apps/api/dist || true; exit 1; fi"]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:3000/ready || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 10s
+    networks: [pmsnet]
+
+  worker:
+    build:
+      context: .
+      dockerfile: apps/worker/Dockerfile
+    container_name: pms_worker
+    restart: unless-stopped
+    env_file:
+      - apps/worker/.env
+    environment:
+      NODE_ENV: production
+      REDIS_URL: redis://redis:6379
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_DB: "0"
+      QUEUE_PREFIX: pms
+      CONCURRENCY_PDF: "4"
+      LOG_LEVEL: info
+      S3_ENDPOINT: http://minio:9000
+      S3_BUCKET: pms-dev
+      S3_ACCESS_KEY_ID: pms
+      S3_SECRET_ACCESS_KEY: pms12345
+      S3_REGION: us-east-1
+      S3_FORCE_PATH_STYLE: "true"
+      DATABASE_URL: postgresql://pms:pms@postgres:5432/pms?schema=public
+    depends_on:
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+    networks: [pmsnet]

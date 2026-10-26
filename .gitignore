@@ -1,0 +1,48 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Builds and compiled outputs
+dist/
+build/
+.next/
+out/
+*.tsbuildinfo
+
+# Environment and secrets
+.env
+.env.local
+.env.*.local
+!.env.example
+!.env.production
+
+# Large binaries and archives
+*.deb
+*.zip
+*.tar.gz
+*.tar
+*.iso
+scratch/*.png
+scratch/*.jpg
+scratch/*.pdf
+scratch/*.xlsx
+scratch/Cancellation letter
+scratch/Provisional
+puppeteer-test/*.png
+*.xlsx
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS & Editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Generated
+/generated/prisma

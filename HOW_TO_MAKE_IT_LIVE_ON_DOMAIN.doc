@@ -1,0 +1,238 @@
+<html xmlns:o="urn:schemas-microsoft-com:office:office"
+      xmlns:w="urn:schemas-microsoft-com:office:word"
+      xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>How to Make PMS Live on Your Domain (Ubuntu Server)</title>
+<!--[if gte mso 9]>
+<xml>
+ <w:WordDocument>
+  <w:View>Print</w:View>
+  <w:Zoom>100</w:Zoom>
+  <w:DoNotOptimizeForBrowser/>
+ </w:WordDocument>
+</xml>
+<![endif]-->
+<style>
+  @page {
+    size: 8.5in 11.0in;
+    margin: 1.0in 1.0in 1.0in 1.0in;
+    mso-header-margin: 0.5in;
+    mso-footer-margin: 0.5in;
+  }
+  body {
+    font-family: 'Calibri', 'Arial', sans-serif;
+    font-size: 11pt;
+    line-height: 1.4;
+    color: #1F2937;
+  }
+  h1 {
+    font-size: 20pt;
+    color: #1E3A8A;
+    font-weight: bold;
+    margin-top: 18pt;
+    margin-bottom: 6pt;
+    border-bottom: 2px solid #1E3A8A;
+    padding-bottom: 4pt;
+  }
+  h2 {
+    font-size: 14pt;
+    color: #1D4ED8;
+    font-weight: bold;
+    margin-top: 14pt;
+    margin-bottom: 4pt;
+  }
+  h3 {
+    font-size: 12pt;
+    color: #374151;
+    font-weight: bold;
+    margin-top: 10pt;
+    margin-bottom: 2pt;
+  }
+  p {
+    margin-top: 4pt;
+    margin-bottom: 8pt;
+  }
+  ul, ol {
+    margin-top: 4pt;
+    margin-bottom: 8pt;
+  }
+  li {
+    margin-bottom: 4pt;
+  }
+  .cmd-box {
+    background-color: #F3F4F6;
+    border: 1px solid #D1D5DB;
+    padding: 8pt 10pt;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 9.5pt;
+    color: #111827;
+    margin-top: 6pt;
+    margin-bottom: 10pt;
+    white-space: pre-wrap;
+  }
+  .info-box {
+    background-color: #EFF6FF;
+    border-left: 4px solid #3B82F6;
+    padding: 8pt 10pt;
+    margin-top: 8pt;
+    margin-bottom: 10pt;
+  }
+  .warn-box {
+    background-color: #FEF3C7;
+    border-left: 4px solid #F59E0B;
+    padding: 8pt 10pt;
+    margin-top: 8pt;
+    margin-bottom: 10pt;
+  }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    margin-top: 8pt;
+    margin-bottom: 12pt;
+  }
+  th, td {
+    border: 1px solid #D1D5DB;
+    padding: 6pt 8pt;
+    text-align: left;
+    font-size: 10pt;
+  }
+  th {
+    background-color: #F3F4F6;
+    color: #1F2937;
+    font-weight: bold;
+  }
+</style>
+</head>
+<body>
+
+<h1>How to Make PMS Live on Your Domain (Ubuntu Server)</h1>
+<p><b>Property Management System (PMS) — Custom Domain Deployment Guide (No Static IP Required)</b></p>
+<p>This document explains step-by-step how to connect your custom domain (for example, <code>yourdomain.com</code>) to your Ubuntu server using <b>Cloudflare Tunnel</b> so your application is live on the internet with free automatic SSL (HTTPS).</p>
+
+<div class="info-box">
+  <b>Why Cloudflare Tunnel?</b><br>
+  Because your Ubuntu server is running on a normal home/office internet connection with a <b>Dynamic IP</b> (which changes periodically), standard DNS A-records will fail. Cloudflare Tunnel creates a secure outbound connection from your server to Cloudflare. You do <b>not</b> need a static IP address, and you do <b>not</b> need to open ports on your router.
+</div>
+
+<h2>Step 1: Add Your Domain to Cloudflare (Free)</h2>
+<ol>
+  <li>Go to <b>https://dash.cloudflare.com</b> and create a free account (or log in).</li>
+  <li>Click <b>Add a site</b>, enter your domain name (e.g., <code>yourdomain.com</code>), and select the <b>Free</b> plan.</li>
+  <li>Cloudflare will display <b>2 Cloudflare Nameservers</b> (for example, <code>ada.ns.cloudflare.com</code> and <code>bob.ns.cloudflare.com</code>). Copy these two names.</li>
+</ol>
+
+<h2>Step 2: Update Nameservers at Your Domain Registrar</h2>
+<ol>
+  <li>Log into the website where you purchased your domain name (Namecheap, GoDaddy, Hostinger, Porkbun, etc.).</li>
+  <li>Open the <b>DNS / Nameservers</b> settings for your domain.</li>
+  <li>Select <b>Custom DNS / Custom Nameservers</b> and replace the existing nameservers with the 2 Cloudflare Nameservers you copied in Step 1.</li>
+  <li>Click <b>Save</b>. <i>(Note: DNS changes take around 5 to 15 minutes to take effect).</i></li>
+</ol>
+
+<h2>Step 3: Create a Cloudflare Tunnel</h2>
+<ol>
+  <li>In your Cloudflare Dashboard, click <b>Zero Trust</b> on the left sidebar.</li>
+  <li>Navigate to <b>Networks</b> &rarr; <b>Tunnels</b> &rarr; click <b>Create a Tunnel</b>.</li>
+  <li>Select <b>Cloudflared</b> as the connector type and click <b>Next</b>.</li>
+  <li>Name your tunnel (e.g., <code>pms-ubuntu-server</code>) and click <b>Save tunnel</b>.</li>
+</ol>
+
+<h2>Step 4: Install Cloudflare Tunnel on Your Ubuntu Server</h2>
+<p>On the tunnel installation page in Cloudflare, choose <b>Debian / Ubuntu</b>. Open your Ubuntu server terminal and run these commands:</p>
+
+<div class="cmd-box"># 1. Download the Cloudflare Tunnel package
+curl -L --output cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
+
+# 2. Install the package
+sudo dpkg -i cloudflared.deb
+
+# 3. Connect your server to Cloudflare (REPLACE WITH YOUR UNIQUE TOKEN FROM CLOUDFLARE DASHBOARD)
+sudo cloudflared service install YOUR_CLOUDFLARED_TOKEN_HERE
+
+# 4. Check that the tunnel is running
+sudo systemctl status cloudflared</div>
+
+<h2>Step 5: Configure Domain Routing (Public Hostnames)</h2>
+<p>In the Cloudflare Tunnel dashboard, go to the <b>Public Hostname</b> tab and click <b>Add a public hostname</b> for each of the following 3 routes:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Subdomain</th>
+      <th>Domain</th>
+      <th>Service Type</th>
+      <th>URL / Target on Ubuntu Server</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>www</code></td>
+      <td><code>ssestateandmarketing.com</code></td>
+      <td><code>HTTP</code></td>
+      <td><code>localhost:3002</code></td>
+      <td><b>Web Frontend Application</b></td>
+    </tr>
+    <tr>
+      <td><i>(Leave Blank / @)</i></td>
+      <td><code>ssestateandmarketing.com</code></td>
+      <td><code>HTTP</code></td>
+      <td><code>localhost:3002</code></td>
+      <td><b>Root Domain Redirect</b></td>
+    </tr>
+    <tr>
+      <td><code>api</code></td>
+      <td><code>ssestateandmarketing.com</code></td>
+      <td><code>HTTP</code></td>
+      <td><code>localhost:3001</code></td>
+      <td><b>Backend REST API Server</b></td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Click <b>Save Hostname</b> after adding each route.</p>
+
+<h2>Step 6: Verify Environment Configuration (.env)</h2>
+<p><i>Note: Phases 1 to 6 have already been automatically executed on your Ubuntu server for <b>ssestateandmarketing.com</b>. Your files are already configured as follows:</i></p>
+
+<h3>1. Backend API Configuration (<code>~/pms/apps/api/.env</code>)</h3>
+<div class="cmd-box">PORT=3001
+HOST=0.0.0.0
+NODE_ENV=production
+DATABASE_URL="postgresql://pms:pms@127.0.0.1:5432/pms?schema=public"
+REDIS_HOST="127.0.0.1"
+REDIS_PORT="6379"
+CORS_ORIGIN="https://www.ssestateandmarketing.com,https://ssestateandmarketing.com,http://localhost:3002"
+JWT_SECRET="super-secret-jwt-key-12345"</div>
+
+<h3>2. Web Frontend Configuration (<code>~/pms/apps/web/.env.production</code>)</h3>
+<div class="cmd-box">NEXT_PUBLIC_API_URL=https://api.ssestateandmarketing.com
+NEXT_PUBLIC_API_KEY=dev-key-local
+NEXT_PUBLIC_TENANT_ID=t_local</div>
+
+<h2>Step 7: Check PM2 Services on Ubuntu Server</h2>
+<p>Your production services are running 24/7 under PM2. To check their live status at any time:</p>
+
+<div class="cmd-box">pm2 status
+pm2 logs</div>
+
+<h2>Step 8: Test Your Live Domain!</h2>
+<ol>
+  <li>Open your web browser and navigate to <b>https://www.ssestateandmarketing.com</b>.</li>
+  <li>Your login screen will load instantly with a secure SSL padlock (HTTPS).</li>
+  <li>Log in with the default admin account:
+    <ul>
+      <li><b>Email:</b> <code>admin@local.dev</code></li>
+      <li><b>Password:</b> <code>dummy</code></li>
+    </ul>
+  </li>
+</ol>
+
+<div class="warn-box">
+  <b>Troubleshooting Note:</b><br>
+  If you see a "CORS error" or cannot log in, double-check that your domain in Cloudflare matches <code>ssestateandmarketing.com</code> and run <code>pm2 restart pms-api</code>.
+</div>
+
+</body>
+</html>

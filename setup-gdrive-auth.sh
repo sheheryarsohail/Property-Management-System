@@ -1,0 +1,15 @@
+#!/bin/bash
+echo "========================================================================"
+echo "☁️ Authenticating Google Drive with rclone"
+echo "========================================================================"
+echo "When prompted by rclone:"
+echo "  1️⃣ Type: n (for New remote)"
+echo "  2️⃣ Name: gdrive"
+echo "  3️⃣ Storage Provider: select 'drive' (Google Drive)"
+echo "  4️⃣ Client ID / Secret: leave blank (press Enter)"
+echo "  5️⃣ Scope: select '1' (Full access)"
+echo "  6️⃣ Edit advanced config: n"
+echo "  7️⃣ Use auto config: Y (to sign in via browser)"
+echo "========================================================================"
+echo ""
+rclone config

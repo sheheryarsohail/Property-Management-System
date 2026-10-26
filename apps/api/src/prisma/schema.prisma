@@ -1,0 +1,668 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Tenant {
+  id               String              @id @db.VarChar(64)
+  name             String
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  auditLogs        AuditLog[]
+  comms            Communication[]
+  customers        Customer[]
+  expenses         Expense[]
+  expensePools     ExpensePool[]
+  idemKeys         IdempotencyKey[]
+  invoices         Invoice[]
+  ownerships       Ownership[]
+  transfers        OwnershipTransfer[]
+  plans            PaymentPlan[]
+  installments     PlanInstallment[]
+  PlotCancellation PlotCancellation[]
+  PlotMerge        PlotMerge[]
+  pdcs             PostDatedCheque[]
+  properties       Property[]
+  receipts         Receipt[]
+  recoveries       RecoveryCharge[]
+  statements       StatementRun[]
+  storage          StorageObject[]
+  users            User[]
+  userTenantAccess UserTenantAccess[]
+}
+
+model User {
+  id               String             @id @default(cuid())
+  tenantId         String
+  email            String             @unique
+  password         String
+  name             String
+  role             UserRole           @default(ADMIN)
+  customerId       String?
+  isActive         Boolean            @default(true)
+  allowedTabs      String[]           @default([])
+  lastLoginAt      DateTime?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  auditLogs        AuditLog[]
+  customer         Customer?          @relation(fields: [customerId], references: [id])
+  tenant           Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenantAccess     UserTenantAccess[]
+
+  @@index([tenantId])
+  @@index([tenantId, role])
+  @@index([customerId])
+}
+
+model Property {
+  id                    String              @id @default(cuid())
+  tenantId              String
+  code                  String
+  title                 String
+  description           String?
+  address               String?
+  sizeSqYd              Decimal?            @db.Decimal(12, 2)
+  type                  PropertyType?
+  block                 String?
+  status                PropertyStatus      @default(AVAILABLE)
+  pricePerSqYd          Decimal?            @db.Decimal(14, 2)
+  discount              Decimal?            @default(0) @db.Decimal(14, 2)
+  totalPrice            Decimal?            @db.Decimal(14, 2)
+  bookingPrice          Decimal?            @db.Decimal(14, 2)
+  confirmationPrice     Decimal?            @db.Decimal(14, 2)
+  installmentPrice      Decimal?            @db.Decimal(14, 2)
+  halfYearlyPrice       Decimal?            @db.Decimal(14, 2)
+  yearlyPrice           Decimal?            @db.Decimal(14, 2)
+  bookingMonths         Int?                @default(1)
+  confirmationMonths    Int?                @default(1)
+  installmentMonths     Int?                @default(50)
+  autoReceiptGeneration Boolean             @default(true)
+  isCorner              Boolean             @default(false)
+  isWestOpen            Boolean             @default(false)
+  isRoadFacing          Boolean             @default(false)
+  isParkingFacing       Boolean             @default(false)
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  developmentCharges    Decimal?            @default(0) @db.Decimal(14, 2)
+  communications        Communication[]
+  expenses              Expense[]
+  invoices              Invoice[]
+  ownerships            Ownership[]
+  transfers             OwnershipTransfer[]
+  plans                 PaymentPlan[]
+  PlotCancellation      PlotCancellation[]
+  PlotMerge             PlotMerge[]
+  tenant                Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  receipts              Receipt[]
+  recoveries            RecoveryCharge[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([tenantId, type])
+  @@index([tenantId, block])
+}
+
+model Customer {
+  id               String              @id @default(cuid())
+  tenantId         String
+  code             String
+  fullName         String
+  email            String?
+  phone            String?
+  mobile           String?
+  nationalId       String?
+  portalAccessId   String?             @unique
+  isPortalActive   Boolean             @default(true)
+  fatherName       String?
+  husbandName      String?
+  address          String?
+  nomineeName      String?
+  nomineeNIC       String?
+  nomineeRelation  String?
+  nomineeAddress   String?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  comms            Communication[]
+  tenant           Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  invoices         Invoice[]
+  ownerships       Ownership[]
+  transfersFrom    OwnershipTransfer[] @relation("TransferFrom")
+  transfersTo      OwnershipTransfer[] @relation("TransferTo")
+  PlotCancellation PlotCancellation[]
+  PlotMerge        PlotMerge[]
+  pdcs             PostDatedCheque[]
+  receipts         Receipt[]
+  users            User[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+  @@index([tenantId, nationalId])
+  @@index([tenantId, phone])
+}
+
+model Ownership {
+  id         String    @id @default(cuid())
+  tenantId   String
+  propertyId String
+  customerId String
+  startDate  DateTime
+  endDate    DateTime?
+  createdAt  DateTime  @default(now())
+  customer   Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  property   Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  tenant     Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, propertyId, customerId, startDate])
+  @@index([tenantId, propertyId])
+  @@index([tenantId, customerId])
+}
+
+model OwnershipTransfer {
+  id                    String         @id @default(cuid())
+  tenantId              String
+  propertyId            String
+  fromCustomer          String
+  toCustomer            String
+  transferType          TransferType
+  transferDate          DateTime
+  status                TransferStatus @default(DRAFT)
+  previousOwnerSnapshot Json?
+  newOwnerSnapshot      Json?
+  propertySnapshot      Json?
+  nocAttachment         String?
+  affidavitAttachment   String?
+  applicationAttachment String?
+  duesCleared           Boolean        @default(false)
+  adminOverride         Boolean        @default(false)
+  adminOverrideReason   String?
+  adminOverrideBy       String?
+  notes                 String?
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+  receiptId             String?        @unique
+  transferFee           Decimal?       @db.Decimal(14, 2)
+  from                  Customer       @relation("TransferFrom", fields: [fromCustomer], references: [id])
+  property              Property       @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  receipt               Receipt?       @relation(fields: [receiptId], references: [id])
+  tenant                Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  to                    Customer       @relation("TransferTo", fields: [toCustomer], references: [id])
+
+  @@index([tenantId, propertyId])
+  @@index([tenantId, fromCustomer])
+  @@index([tenantId, toCustomer])
+  @@index([tenantId, status])
+}
+
+model PaymentPlan {
+  id            String            @id @default(cuid())
+  tenantId      String
+  propertyId    String
+  title         String
+  totalAmount   Decimal           @db.Decimal(14, 2)
+  currency      String            @default("PKR")
+  startDate     DateTime
+  expectedTerms Int
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  property      Property          @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  tenant        Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  installments  PlanInstallment[]
+
+  @@index([tenantId, propertyId])
+}
+
+model PlanInstallment {
+  id        String       @id @default(cuid())
+  tenantId  String
+  planId    String
+  seq       Int
+  dueDate   DateTime
+  amount    Decimal      @db.Decimal(14, 2)
+  createdAt DateTime     @default(now())
+  type      InvoiceType? @default(INSTALLMENT)
+  invoice   Invoice?
+  plan      PaymentPlan  @relation(fields: [planId], references: [id], onDelete: Cascade)
+  tenant    Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, planId, seq])
+  @@index([tenantId, dueDate])
+}
+
+model Invoice {
+  id             String            @id @default(cuid())
+  tenantId       String
+  propertyId     String
+  customerId     String
+  installmentId  String?           @unique
+  code           String
+  type           InvoiceType       @default(INSTALLMENT)
+  issueDate      DateTime
+  dueDate        DateTime
+  currency       String            @default("PKR")
+  subtotal       Decimal           @db.Decimal(14, 2)
+  tax            Decimal           @default(0) @db.Decimal(14, 2)
+  total          Decimal           @db.Decimal(14, 2)
+  paid           Decimal           @default(0) @db.Decimal(14, 2)
+  status         InvoiceStatus     @default(PENDING)
+  notes          String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  communications Communication[]
+  customer       Customer          @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  installment    PlanInstallment?  @relation(fields: [installmentId], references: [id])
+  property       Property          @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  tenant         Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  pdcs           PostDatedCheque[]
+  receipts       Receipt[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId, customerId])
+  @@index([tenantId, propertyId])
+  @@index([tenantId, status])
+  @@index([tenantId, type])
+  @@index([tenantId, dueDate])
+  @@index([tenantId, issueDate])
+  @@index([tenantId, status, dueDate])
+}
+
+model Receipt {
+  id                String             @id @default(cuid())
+  tenantId          String
+  code              String
+  invoiceId         String?
+  customerId        String
+  propertyId        String?
+  method            ReceiptMethod
+  reference         String?
+  amount            Decimal            @db.Decimal(14, 2)
+  receivedAt        DateTime
+  bankName          String?
+  chequeNumber      String?
+  chequeDate        DateTime?
+  slipNumber        String?
+  status            ReceiptStatus      @default(POSTED)
+  attachments       Json?
+  notes             String?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  allocations       Json?
+  category          String?            @default("INSTALLMENT")
+  OwnershipTransfer OwnershipTransfer?
+  PlotCancellation  PlotCancellation?
+  PlotMerge         PlotMerge?
+  customer          Customer           @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  invoice           Invoice?           @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  property          Property?          @relation(fields: [propertyId], references: [id])
+  tenant            Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, code])
+  @@index([tenantId, invoiceId])
+  @@index([tenantId, customerId])
+  @@index([tenantId, propertyId])
+  @@index([tenantId, receivedAt])
+  @@index([tenantId, status])
+}
+
+model ExpensePool {
+  id          String           @id @default(cuid())
+  tenantId    String
+  code        String
+  title       String
+  description String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  expenses    Expense[]
+  tenant      Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  recoveries  RecoveryCharge[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+}
+
+model Expense {
+  id          String          @id @default(cuid())
+  tenantId    String
+  propertyId  String?
+  poolId      String?
+  title       String
+  category    ExpenseCategory
+  subcategory String?
+  type        ExpenseType
+  vendorName  String?
+  vendorId    String?
+  billNumber  String?
+  billDate    DateTime?
+  amount      Decimal         @db.Decimal(14, 2)
+  tax         Decimal?        @db.Decimal(14, 2)
+  netAmount   Decimal?        @db.Decimal(14, 2)
+  costCenter  String?
+  project     String?
+  incurredAt  DateTime
+  status      ExpenseStatus   @default(DRAFT)
+  attachments Json?
+  notes       String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  pool        ExpensePool?    @relation(fields: [poolId], references: [id])
+  property    Property?       @relation(fields: [propertyId], references: [id])
+  tenant      Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, incurredAt])
+  @@index([tenantId, propertyId])
+  @@index([tenantId, category])
+  @@index([tenantId, status])
+}
+
+model RecoveryCharge {
+  id               String       @id @default(cuid())
+  tenantId         String
+  propertyId       String
+  poolId           String?
+  title            String
+  description      String?
+  amount           Decimal      @db.Decimal(14, 2)
+  chargeDate       DateTime
+  allocationMethod String?
+  allocationShare  Decimal?     @db.Decimal(14, 6)
+  invoiceId        String?
+  notes            String?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  pool             ExpensePool? @relation(fields: [poolId], references: [id])
+  property         Property     @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  tenant           Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, propertyId])
+  @@index([tenantId, chargeDate])
+  @@index([tenantId, poolId])
+}
+
+model PostDatedCheque {
+  id          String    @id @default(cuid())
+  tenantId    String
+  customerId  String
+  bank        String?
+  chequeNo    String?
+  amount      Decimal   @db.Decimal(14, 2)
+  dueDate     DateTime
+  status      PdcStatus @default(RECEIVED)
+  notes       String?
+  invoiceId   String?
+  receiptCode String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  customer    Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  invoice     Invoice?  @relation(fields: [invoiceId], references: [id])
+  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, dueDate])
+  @@index([tenantId, status])
+  @@index([tenantId, invoiceId])
+}
+
+model Communication {
+  id         String      @id @default(cuid())
+  tenantId   String
+  customerId String?
+  propertyId String?
+  invoiceId  String?
+  channel    CommChannel
+  subject    String?
+  body       String?
+  createdAt  DateTime    @default(now())
+  customer   Customer?   @relation(fields: [customerId], references: [id])
+  invoice    Invoice?    @relation(fields: [invoiceId], references: [id])
+  property   Property?   @relation(fields: [propertyId], references: [id])
+  tenant     Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, createdAt])
+}
+
+model StorageObject {
+  id          String    @id @default(cuid())
+  tenantId    String
+  key         String
+  sha256      String
+  size        Int
+  contentType String
+  url         String?
+  deduped     Boolean   @default(false)
+  expiresAt   DateTime?
+  mode        String    @default("s3")
+  createdAt   DateTime  @default(now())
+  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, key])
+  @@index([tenantId, sha256])
+}
+
+model IdempotencyKey {
+  id          String   @id @default(cuid())
+  tenantId    String
+  key         String
+  scope       String
+  response    Json?
+  createdAt   DateTime @default(now())
+  lastUsedAt  DateTime @default(now())
+  resourceKey String?
+  notes       String?
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([key, scope])
+  @@index([tenantId])
+}
+
+model StatementRun {
+  id         String   @id @default(cuid())
+  tenantId   String
+  scope      String
+  fromDate   DateTime
+  toDate     DateTime
+  storageKey String?
+  createdAt  DateTime @default(now())
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, createdAt])
+  @@index([tenantId, scope])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  tenantId  String
+  userId    String?
+  action    String
+  entity    String
+  entityId  String
+  changes   Json?
+  reason    String?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user      User?    @relation(fields: [userId], references: [id])
+
+  @@index([tenantId])
+  @@index([userId])
+  @@index([entity, entityId])
+  @@index([createdAt])
+}
+
+model PlotCancellation {
+  id               String        @id @default(cuid())
+  tenantId         String
+  propertyId       String
+  customerId       String
+  receiptId        String?       @unique
+  totalPrice       Decimal       @db.Decimal(14, 2)
+  totalPaid        Decimal       @db.Decimal(14, 2)
+  totalDues        Decimal       @db.Decimal(14, 2)
+  deductionPercent Decimal       @default(20) @db.Decimal(5, 2)
+  deductionAmount  Decimal       @db.Decimal(14, 2)
+  refundAmount     Decimal       @db.Decimal(14, 2)
+  refundMethod     ReceiptMethod @default(CASH)
+  refundReference  String?
+  bankName         String?
+  chequeNumber     String?
+  chequeDate       DateTime?
+  cancelledAt      DateTime      @default(now())
+  reason           String?
+  notes            String?
+  cancelledBy      String?
+  Customer         Customer      @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  Property         Property      @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  Receipt          Receipt?      @relation(fields: [receiptId], references: [id])
+  Tenant           Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, cancelledAt])
+  @@index([tenantId, customerId])
+  @@index([tenantId, propertyId])
+}
+
+model PlotMerge {
+  id                    String   @id @default(cuid())
+  tenantId              String
+  customerId            String
+  targetPropertyId      String
+  receiptId             String?  @unique
+  totalMergedAmount     Decimal  @db.Decimal(14, 2)
+  sourcePropertiesCount Int      @default(1)
+  sourceDetails         Json
+  reason                String?
+  notes                 String?
+  mergedAt              DateTime @default(now())
+  mergedBy              String?
+  Customer              Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  Receipt               Receipt? @relation(fields: [receiptId], references: [id])
+  Property              Property @relation(fields: [targetPropertyId], references: [id], onDelete: Cascade)
+  Tenant                Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, customerId])
+  @@index([tenantId, mergedAt])
+  @@index([tenantId, targetPropertyId])
+}
+
+model UserTenantAccess {
+  id       String @id @default(cuid())
+  userId   String
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, tenantId])
+  @@index([tenantId])
+  @@index([userId])
+}
+
+enum InvoiceStatus {
+  DRAFT
+  PENDING
+  PARTIAL
+  PAID
+  OVERDUE
+  VOID
+  PDC
+  BOUNCED
+}
+
+enum InvoiceType {
+  BOOKING
+  INSTALLMENT
+  HALF_YEARLY
+  YEARLY
+  DEVELOPMENT_CHARGE
+  ADJUSTMENT
+  CONFIRMATION
+}
+
+enum ReceiptMethod {
+  CASH
+  CARD
+  BANK_TRANSFER
+  ONLINE
+  PDC
+  CHEQUE
+}
+
+enum ReceiptStatus {
+  DRAFT
+  POSTED
+  REVERSED
+  VOID
+}
+
+enum PdcStatus {
+  RECEIVED
+  DEPOSITED
+  CLEARED
+  BOUNCED
+  RETURNED
+  CANCELLED
+}
+
+enum TransferType {
+  SALE
+  GIFT
+  INHERITANCE
+  INTERNAL
+}
+
+enum TransferStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+enum CommChannel {
+  EMAIL
+  SMS
+  PHONE
+  WHATSAPP
+  NOTE
+}
+
+enum ExpenseCategory {
+  OFFICE
+  DEVELOPMENT
+}
+
+enum ExpenseType {
+  PURCHASE_INVOICE
+  PETTY_CASH
+  ADVANCE_TO_VENDOR
+}
+
+enum ExpenseStatus {
+  DRAFT
+  APPROVED
+  POSTED
+  CANCELLED
+}
+
+enum PropertyStatus {
+  AVAILABLE
+  BOOKED
+  IN_TRANSFER
+  SOLD
+  CANCELLED
+  RESERVED
+}
+
+enum PropertyType {
+  RESIDENTIAL
+  COMMERCIAL
+}
+
+enum UserRole {
+  ADMIN
+  SALES
+  ACCOUNTS
+  AUDITOR
+  CUSTOMER
+  SUPER_ADMIN
+}

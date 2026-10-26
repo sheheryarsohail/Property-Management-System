@@ -1,0 +1,1123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ubuntu Server Deployment & Production Setup Guide — Property Management System</title>
+  <style>
+    :root {
+      --primary: #4f46e5;
+      --primary-hover: #4338ca;
+      --primary-light: #eef2ff;
+      --text: #1e293b;
+      --text-muted: #64748b;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --border: #e2e8f0;
+      --code-bg: #0f172a;
+      --code-text: #e2e8f0;
+      --accent-green: #10b981;
+      --accent-green-bg: #d1fae5;
+      --accent-amber: #f59e0b;
+      --accent-amber-bg: #fef3c7;
+      --accent-blue: #3b82f6;
+      --accent-blue-bg: #dbeafe;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      display: flex;
+      min-height: 100vh;
+    }
+
+    /* Sidebar Navigation */
+    aside {
+      width: 300px;
+      background-color: var(--card-bg);
+      border-right: 1px solid var(--border);
+      position: fixed;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      overflow-y: auto;
+      padding: 1.5rem 1rem;
+      z-index: 50;
+    }
+
+    .brand-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .brand-subtitle {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 1.5rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav-group {
+      margin-bottom: 1.5rem;
+    }
+
+    .nav-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-bottom: 0.5rem;
+      padding-left: 0.5rem;
+    }
+
+    .nav-list {
+      list-style: none;
+    }
+
+    .nav-item {
+      margin-bottom: 0.25rem;
+    }
+
+    .nav-link {
+      display: block;
+      padding: 0.5rem 0.75rem;
+      color: var(--text);
+      text-decoration: none;
+      font-size: 0.875rem;
+      border-radius: 6px;
+      transition: all 0.15s ease;
+    }
+
+    .nav-link:hover, .nav-link.active {
+      background-color: var(--primary-light);
+      color: var(--primary);
+      font-weight: 600;
+    }
+
+    /* Main Content Area */
+    main {
+      flex: 1;
+      margin-left: 300px;
+      padding: 3rem 5%;
+      max-width: 1200px;
+    }
+
+    /* Header & Title */
+    .doc-header {
+      margin-bottom: 3rem;
+      padding-bottom: 2rem;
+      border-bottom: 2px solid var(--border);
+    }
+
+    .doc-title {
+      font-size: 2.5rem;
+      font-weight: 800;
+      color: #0f172a;
+      margin-bottom: 0.5rem;
+      letter-spacing: -0.03em;
+    }
+
+    .doc-meta {
+      display: inline-flex;
+      align-items: center;
+      gap: 1rem;
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      margin-top: 0.5rem;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      background-color: var(--primary-light);
+      color: var(--primary);
+      font-weight: 600;
+      font-size: 0.75rem;
+      border-radius: 9999px;
+      text-transform: uppercase;
+    }
+
+    /* Cards & Sections */
+    section {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 2.5rem;
+      margin-bottom: 2.5rem;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+
+    h2 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 1.5rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    h3 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #1e293b;
+      margin: 1.75rem 0 0.75rem 0;
+    }
+
+    h4 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #334155;
+      margin: 1.25rem 0 0.5rem 0;
+    }
+
+    p {
+      margin-bottom: 1rem;
+      color: #334155;
+    }
+
+    ul, ol {
+      margin: 0 0 1.25rem 1.5rem;
+      color: #334155;
+    }
+
+    li {
+      margin-bottom: 0.5rem;
+    }
+
+    /* Interactive Checklist */
+    .checklist-box {
+      background-color: #f1f5f9;
+      border-radius: 10px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .checklist-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.5rem 0;
+      cursor: pointer;
+      font-weight: 500;
+      color: #334155;
+      border-bottom: 1px solid rgba(226, 232, 240, 0.6);
+    }
+
+    .checklist-item:last-child {
+      border-bottom: none;
+    }
+
+    .checklist-item input[type="checkbox"] {
+      width: 1.25rem;
+      height: 1.25rem;
+      cursor: pointer;
+      accent-color: var(--primary);
+    }
+
+    .checklist-item.checked span {
+      text-decoration: line-through;
+      color: var(--text-muted);
+    }
+
+    /* Callouts & Alerts */
+    .callout {
+      padding: 1.25rem;
+      border-radius: 8px;
+      margin: 1.5rem 0;
+      border-left: 4px solid transparent;
+    }
+
+    .callout-info {
+      background-color: var(--accent-blue-bg);
+      border-color: var(--accent-blue);
+      color: #1e40af;
+    }
+
+    .callout-success {
+      background-color: var(--accent-green-bg);
+      border-color: var(--accent-green);
+      color: #065f46;
+    }
+
+    .callout-warning {
+      background-color: var(--accent-amber-bg);
+      border-color: var(--accent-amber);
+      color: #92400e;
+    }
+
+    .callout-title {
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    /* Code Blocks */
+    .code-wrapper {
+      position: relative;
+      margin: 1.25rem 0;
+      border-radius: 8px;
+      overflow: hidden;
+      background-color: var(--code-bg);
+    }
+
+    .code-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background-color: #1e293b;
+      padding: 0.5rem 1rem;
+      font-size: 0.75rem;
+      color: #94a3b8;
+      font-family: monospace;
+    }
+
+    .copy-btn {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #f8fafc;
+      padding: 0.25rem 0.75rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .copy-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .copy-btn.copied {
+      background: var(--accent-green);
+      border-color: var(--accent-green);
+    }
+
+    pre {
+      padding: 1.25rem 1rem;
+      overflow-x: auto;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.875rem;
+      color: var(--code-text);
+      line-height: 1.6;
+    }
+
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    p code, li code {
+      background-color: #f1f5f9;
+      color: #0f172a;
+      padding: 0.2rem 0.4rem;
+      border-radius: 4px;
+      font-size: 0.875em;
+    }
+
+    /* Tables */
+    .table-container {
+      overflow-x: auto;
+      margin: 1.5rem 0;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.875rem;
+    }
+
+    th {
+      background-color: #f8fafc;
+      padding: 0.75rem 1rem;
+      font-weight: 600;
+      color: #334155;
+      border-bottom: 2px solid var(--border);
+    }
+
+    td {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border);
+      color: #475569;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tr:hover td {
+      background-color: #f8fafc;
+    }
+
+    /* Print Styles */
+    @media print {
+      aside {
+        display: none;
+      }
+      main {
+        margin-left: 0;
+        padding: 0;
+        max-width: 100%;
+      }
+      section {
+        border: none;
+        box-shadow: none;
+        padding: 1rem 0;
+        page-break-inside: avoid;
+      }
+      .code-wrapper {
+        border: 1px solid #cbd5e1;
+      }
+      .copy-btn {
+        display: none;
+      }
+      body {
+        background-color: #ffffff;
+      }
+    }
+
+    @media (max-width: 900px) {
+      aside {
+        position: static;
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+      }
+      main {
+        margin-left: 0;
+        padding: 2rem 1.5rem;
+      }
+      body {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Sidebar Navigation -->
+  <aside>
+    <div class="brand-title">
+      <span>🚀 PMS Production Guide</span>
+    </div>
+    <div class="brand-subtitle">
+      Ubuntu Server Deployment Portal
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-label">Overview</div>
+      <ul class="nav-list">
+        <li class="nav-item"><a href="#overview" class="nav-link">Dynamic IP Architecture</a></li>
+        <li class="nav-item"><a href="#checklist" class="nav-link">Deployment Checklist</a></li>
+      </ul>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-label">Step-by-Step Phases</div>
+      <ul class="nav-list">
+        <li class="nav-item"><a href="#phase-1" class="nav-link">1. Server Preparation & System</a></li>
+        <li class="nav-item"><a href="#phase-2" class="nav-link">2. Repository & `.env` Files</a></li>
+        <li class="nav-item"><a href="#phase-3" class="nav-link">3. Databases & Storage (Docker)</a></li>
+        <li class="nav-item"><a href="#phase-4" class="nav-link">4. Prisma Migrations & Seed</a></li>
+        <li class="nav-item"><a href="#phase-5" class="nav-link">5. Build Production Bundles</a></li>
+        <li class="nav-item"><a href="#phase-6" class="nav-link">6. PM2 Process Management</a></li>
+        <li class="nav-item"><a href="#phase-7" class="nav-link">7. Custom Domain (Dynamic IP)</a></li>
+        <li class="nav-item"><a href="#phase-8" class="nav-link">8. Nightly Google Drive Backups</a></li>
+        <li class="nav-item"><a href="#phase-9" class="nav-link">9. 1-Click Code Update Script</a></li>
+        <li class="nav-item"><a href="#phase-10" class="nav-link">10. Troubleshooting & Cheat Sheet</a></li>
+      </ul>
+    </div>
+  </aside>
+
+  <!-- Main Content Area -->
+  <main>
+    <!-- Document Header -->
+    <header class="doc-header">
+      <span class="badge">Production Ready • v4.0</span>
+      <h1 class="doc-title">Ubuntu Server Deployment & Operations Guide</h1>
+      <div class="doc-meta">
+        <span>Property Management System (PMS)</span>
+        <span>•</span>
+        <span>Custom Domain & Dynamic IP Support</span>
+        <span>•</span>
+        <span>Ubuntu 22.04 / 24.04 LTS</span>
+      </div>
+    </header>
+
+    <!-- Overview Section -->
+    <section id="overview">
+      <h2>🌐 How to Make Your App Live Without a Static IP</h2>
+      <p>
+        Normally, running a live web server on a custom domain requires purchasing a paid <strong>Static Public IP Address</strong> from your Internet Service Provider (ISP). With a standard <strong>Dynamic IP</strong> (common for home and office internet), your IP address changes periodically, which causes standard DNS records to break.
+      </p>
+
+      <div class="callout callout-success">
+        <div class="callout-title">✅ The Free & Secure Solution: Cloudflare Tunnel</div>
+        <p style="margin-bottom: 0;">
+          We use <strong>Cloudflare Tunnel (<code>cloudflared</code>)</strong> to connect your Ubuntu server directly to your custom domain without needing a static IP:
+        </p>
+        <ul style="margin-top: 0.75rem; margin-bottom: 0;">
+          <li><strong>No Static IP Required:</strong> Your server opens a secure outbound encrypted connection to Cloudflare. Whenever your ISP changes your IP address, Cloudflare Tunnel remains connected automatically with zero downtime.</li>
+          <li><strong>No Router Port Forwarding Required:</strong> Works effortlessly even behind strict firewalls and CGNAT (Carrier-Grade NAT).</li>
+          <li><strong>Free Automatic SSL (HTTPS):</strong> Cloudflare automatically provisions and renews valid SSL certificates for your custom domain.</li>
+          <li><strong>DDoS Protection & Hidden IP:</strong> Your actual home/office IP is hidden from the public internet, protecting your server against cyberattacks.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- Checklist Section -->
+    <section id="checklist">
+      <h2>📋 Interactive Progress Checklist</h2>
+      <p>Track your deployment progress. Your checkmarks are automatically saved in your browser.</p>
+      
+      <div class="checklist-box" id="deployment-checklist">
+        <label class="checklist-item"><input type="checkbox" data-key="phase-1"> <span><strong>Phase 1:</strong> Update Ubuntu & Install Docker, Node.js 20, PNPM, PM2, and UFW</span></label>
+        <label class="checklist-item"><input type="checkbox" data-key="phase-2"> <span><strong>Phase 2:</strong> Clone Project Repository & Configure All 4 `.env` Files</span></label>
+        <label class="checklist-item"><input type="checkbox" data-key="phase-3"> <span><strong>Phase 3:</strong> Start PostgreSQL, Redis, and MinIO via Docker Compose</span></label>
+        <label class="checklist-item"><input type="checkbox" data-key="phase-4"> <span><strong>Phase 4:</strong> Generate Prisma Client, Run Migrations, and Seed Default Admin</span></label>
+        <label class="checklist-item"><input type="checkbox" data-key="phase-5"> <span><strong>Phase 5:</strong> Build Production Bundles for `@pms/api`, `@pms/worker`, and `@pms/web`</span></label>
+        <label class="checklist-item"><input type="checkbox" data-key="phase-6"> <span><strong>Phase 6:</strong> Configure PM2 Process Manager (`ecosystem.config.js`) and Autostart</span></label>
+        <label class="checklist-item"><input type="checkbox" data-key="phase-7"> <span><strong>Phase 7:</strong> Connect Custom Domain via Cloudflare Tunnel (Dynamic IP Support)</span></label>
+        <label class="checklist-item"><input type="checkbox" data-key="phase-8"> <span><strong>Phase 8:</strong> Setup Automated Nightly Backups to Google Drive (7-Day Retention)</span></label>
+        <label class="checklist-item"><input type="checkbox" data-key="phase-9"> <span><strong>Phase 9:</strong> Create 1-Click Production Update Script (`update-live.sh`)</span></label>
+      </div>
+    </section>
+
+    <!-- Phase 1 -->
+    <section id="phase-1">
+      <h2>🛠️ Phase 1: Server Preparation & System Installation</h2>
+      
+      <h3>1.1 Update System Packages</h3>
+      <p>Open your terminal on the Ubuntu server and execute:</p>
+      <div class="code-wrapper">
+        <div class="code-header"><span>Terminal — Ubuntu Server</span><button class="copy-btn">Copy</button></div>
+        <pre><code>sudo apt update && sudo apt upgrade -y
+sudo apt install -y curl git build-essential ca-certificates rclone ufw jq lsof</code></pre>
+      </div>
+
+      <h3>1.2 Install Docker Engine & Docker Compose</h3>
+      <div class="code-wrapper">
+        <div class="code-header"><span>Terminal — Ubuntu Server</span><button class="copy-btn">Copy</button></div>
+        <pre><code># Install Docker and Docker Compose v2
+sudo apt install -y docker.io docker-compose-v2
+
+# Start Docker daemon and enable boot autostart
+sudo systemctl enable --now docker
+
+# Add current user to docker group (removes need for sudo)
+sudo usermod -aG docker $USER
+
+# Apply group permissions to current session
+newgrp docker</code></pre>
+      </div>
+
+      <div class="callout callout-info">
+        <div class="callout-title">ℹ️ Verify Docker Installation</div>
+        <p style="margin: 0;">Run <code>docker --version</code> and <code>docker compose version</code>. You should see Docker version 24+ and Docker Compose v2.x.</p>
+      </div>
+
+      <h3>1.3 Install Node.js 20 LTS, PNPM, and PM2</h3>
+      <div class="code-wrapper">
+        <div class="code-header"><span>Terminal — Ubuntu Server</span><button class="copy-btn">Copy</button></div>
+        <pre><code># Add NodeSource Node.js 20 LTS repository
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+
+# Install Node.js
+sudo apt install -y nodejs
+
+# Verify Node.js version (Must output v20.x.x)
+node -v
+npm -v
+
+# Install PNPM (Package Manager) and PM2 (Process Manager) globally
+sudo npm install -g pnpm pm2</code></pre>
+      </div>
+
+      <h3>1.4 Configure Server Firewall (UFW)</h3>
+      <div class="code-wrapper">
+        <div class="code-header"><span>Terminal — Ubuntu Server</span><button class="copy-btn">Copy</button></div>
+        <pre><code># Allow SSH access
+sudo ufw allow 22/tcp
+
+# Allow HTTP and HTTPS web traffic
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+
+# Enable firewall
+sudo ufw --force enable
+sudo ufw status</code></pre>
+      </div>
+    </section>
+
+    <!-- Phase 2 -->
+    <section id="phase-2">
+      <h2>📂 Phase 2: Repository Cloning & Environment Setup</h2>
+
+      <h3>2.1 Clone Project Repository</h3>
+      <p>Clone the codebase into your home folder (<code>~/pms</code>):</p>
+      <div class="code-wrapper">
+        <div class="code-header"><span>Terminal</span><button class="copy-btn">Copy</button></div>
+        <pre><code>cd ~
+git clone &lt;YOUR_GIT_REPOSITORY_URL&gt; pms
+cd ~/pms</code></pre>
+      </div>
+
+      <h3>2.2 Create Environment (<code>.env</code>) Files</h3>
+      <p>The monorepo requires environment files for the workspace root, API, Web frontend, and Worker.</p>
+
+      <h4>1️⃣ Root Workspace Environment File (<code>~/pms/.env</code>)</h4>
+      <div class="code-wrapper">
+        <div class="code-header"><span>~/pms/.env</span><button class="copy-btn">Copy</button></div>
+        <pre><code>DATABASE_URL="postgresql://pms:pms@127.0.0.1:5432/pms?schema=public"
+DEFAULT_TENANT_ID="t_local"
+API_KEY="dev-key-local"
+JWT_SECRET="super-secret-jwt-key-change-this-in-production-12345"
+REDIS_HOST="127.0.0.1"
+REDIS_PORT="6379"
+STORAGE_MODE="s3"
+S3_ENDPOINT="http://127.0.0.1:9000"
+S3_BUCKET="pms-dev"
+S3_ACCESS_KEY_ID="pms"
+S3_SECRET_ACCESS_KEY="pms12345"
+S3_REGION="us-east-1"
+S3_FORCE_PATH_STYLE="true"
+BRAND_NAME="PMS"
+BRAND_SUBTITLE="Property Management System"</code></pre>
+      </div>
+
+      <h4>2️⃣ Backend API Environment File (<code>~/pms/apps/api/.env</code>)</h4>
+      <p><em>Note: Replace <code>yourdomain.com</code> with your actual domain name below.</em></p>
+      <div class="code-wrapper">
+        <div class="code-header"><span>~/pms/apps/api/.env</span><button class="copy-btn">Copy</button></div>
+        <pre><code>PORT=3001
+HOST=0.0.0.0
+NODE_ENV=production
+DATABASE_URL="postgresql://pms:pms@127.0.0.1:5432/pms?schema=public"
+REDIS_HOST="127.0.0.1"
+REDIS_PORT="6379"
+CORS_ORIGIN="https://www.yourdomain.com,https://yourdomain.com,http://localhost:3002"
+JWT_SECRET="super-secret-jwt-key-change-this-in-production-12345"</code></pre>
+      </div>
+
+      <h4>3️⃣ Web Frontend Environment File (<code>~/pms/apps/web/.env.production</code>)</h4>
+      <div class="code-wrapper">
+        <div class="code-header"><span>~/pms/apps/web/.env.production</span><button class="copy-btn">Copy</button></div>
+        <pre><code>NEXT_PUBLIC_API_URL=https://api.yourdomain.com
+NEXT_PUBLIC_API_KEY=dev-key-local
+NEXT_PUBLIC_TENANT_ID=t_local</code></pre>
+      </div>
+
+      <h4>4️⃣ Background Worker Environment File (<code>~/pms/apps/worker/.env</code>)</h4>
+      <div class="code-wrapper">
+        <div class="code-header"><span>~/pms/apps/worker/.env</span><button class="copy-btn">Copy</button></div>
+        <pre><code>NODE_ENV=production
+REDIS_HOST="127.0.0.1"
+REDIS_PORT="6379"
+DATABASE_URL="postgresql://pms:pms@127.0.0.1:5432/pms?schema=public"
+CONCURRENCY_PDF=4
+LOG_LEVEL=info</code></pre>
+      </div>
+    </section>
+
+    <!-- Phase 3 -->
+    <section id="phase-3">
+      <h2>🐳 Phase 3: Launching Databases & Storage (Docker Compose)</h2>
+      
+      <h3>3.1 Start Infrastructure Containers</h3>
+      <p>Launch PostgreSQL 16, Redis 7, and MinIO S3 storage in the background:</p>
+      <div class="code-wrapper">
+        <div class="code-header"><span>Terminal</span><button class="copy-btn">Copy</button></div>
+        <pre><code>cd ~/pms
+docker compose up -d postgres redis minio minio-init</code></pre>
+      </div>
+
+      <h3>3.2 Verify Container Health</h3>
+      <div class="code-wrapper">
+        <div class="code-header"><span>Terminal</span><button class="copy-btn">Copy</button></div>
+        <pre><code>docker compose ps</code></pre>
+      </div>
+
+      <div class="callout callout-success">
+        <div class="callout-title">✅ Expected Verification Output</div>
+        <p style="margin: 0;">All three containers should display status <code>Up</code> or <code>running (healthy)</code>: <strong>pms_postgres</strong> (Port 5432), <strong>pms_redis</strong> (Port 6379), and <strong>pms_minio</strong> (Ports 9000 & 9001).</p>
+      </div>
+    </section>
+
+    <!-- Phase 4 -->
+    <section id="phase-4">
+      <h2>🗄️ Phase 4: Prisma Database Schema Migration & Seeding</h2>
+
+      <h3>4.1 Install Node Dependencies</h3>
+      <div class="code-wrapper">
+        <div class="code-header"><span>Terminal</span><button class="copy-btn">Copy</button></div>
+        <pre><code>cd ~/pms
+pnpm install
+pnpm run prisma:generate</code></pre>
+      </div>
+
+      <h3>4.2 Run Database Migrations & Seed Default Data</h3>
+      <div class="code-wrapper">
+        <div class="code-header"><span>Terminal</span><button class="copy-btn">Copy</button></div>
+        <pre><code># Apply SQL schema to PostgreSQL
+pnpm --filter @pms/api prisma:migrate
+
+# Populate database with default admin account and initial data
+pnpm --filter @pms/api prisma:seed</code></pre>
+      </div>
+
+      <div class="callout callout-warning">
+        <div class="callout-title">🔑 Default Admin Credentials</div>
+        <p style="margin: 0;"><strong>Email:</strong> <code>admin@local.dev</code> &nbsp;|&nbsp; <strong>Password:</strong> <code>dummy</code></p>
+      </div>
+    </section>
+
+    <!-- Phase 5 -->
+    <section id="phase-5">
+      <h2>🏗️ Phase 5: Production Building</h2>
+      <p>Compiling production builds optimizes JavaScript execution and reduces memory footprint by approximately 50%.</p>
+
+      <div class="code-wrapper">
+        <div class="code-header"><span>Terminal</span><button class="copy-btn">Copy</button></div>
+        <pre><code>cd ~/pms
+
+# 1. Build NestJS Backend API
+pnpm --filter @pms/api build
+
+# 2. Build NestJS Background Worker
+pnpm --filter @pms/worker build
+
+# 3. Build Next.js Web Frontend
+pnpm --filter @pms/web build</code></pre>
+      </div>
+    </section>
+
+    <!-- Phase 6 -->
+    <section id="phase-6">
+      <h2>⚡ Phase 6: PM2 Process Management & Service Autostart</h2>
+      <p>PM2 keeps your Node.js applications running 24/7, handles automatic crash restarts, and restores services whenever the server reboots.</p>
+
+      <h3>6.1 Create PM2 Configuration (<code>ecosystem.config.js</code>)</h3>
+      <p>Create the file <code>~/pms/ecosystem.config.js</code> with the following dynamic configuration:</p>
+      <div class="code-wrapper">
+        <div class="code-header"><span>~/pms/ecosystem.config.js</span><button class="copy-btn">Copy</button></div>
+        <pre><code>const path = require('path');
+const rootDir = __dirname;
+
+module.exports = {
+  apps: [
+    {
+      name: "pms-api",
+      script: "apps/api/dist/main.js",
+      cwd: rootDir,
+      instances: 1,
+      exec_mode: "fork",
+      env: {
+        NODE_ENV: "production",
+        PORT: 3001,
+        HOST: "0.0.0.0",
+      },
+      max_memory_restart: "500M"
+    },
+    {
+      name: "pms-worker",
+      script: "apps/worker/dist/main.js",
+      cwd: rootDir,
+      instances: 1,
+      exec_mode: "fork",
+      env: {
+        NODE_ENV: "production",
+      },
+      max_memory_restart: "400M"
+    },
+    {
+      name: "pms-web",
+      script: "node_modules/next/dist/bin/next",
+      args: "start apps/web -p 3002",
+      cwd: rootDir,
+      instances: 1,
+      exec_mode: "fork",
+      env: {
+        NODE_ENV: "production",
+        PORT: 3002
+      },
+      max_memory_restart: "600M"
+    }
+  ]
+};</code></pre>
+      </div>
+
+      <h3>6.2 Start PM2 Services & Verify Status</h3>
+      <div class="code-wrapper">
+        <div class="code-header"><span>Terminal</span><button class="copy-btn">Copy</button></div>
+        <pre><code>cd ~/pms
+pm2 start ecosystem.config.js
+pm2 status</code></pre>
+      </div>
+
+      <h3>6.3 Enable Auto-Start on Server Reboot</h3>
+      <div class="code-wrapper">
+        <div class="code-header"><span>Terminal</span><button class="copy-btn">Copy</button></div>
+        <pre><code># 1. Save active PM2 app list
+pm2 save
+
+# 2. Generate and enable systemd startup hook
+pm2 startup</code></pre>
+      </div>
+      <p><em>Important: Copy and execute the exact command string displayed by <code>pm2 startup</code> in your terminal.</em></p>
+    </section>
+
+    <!-- Phase 7 -->
+    <section id="phase-7">
+      <h2>🌐 Phase 7: Connect Custom Domain via Cloudflare Tunnel (Dynamic IP Support)</h2>
+      <p>Follow these exact steps to make your application live on your custom domain without a static IP address or router port forwarding.</p>
+
+      <h3>Step 7.1: Add Your Domain to Cloudflare (Free)</h3>
+      <ol>
+        <li>Sign up for a free account at <a href="https://dash.cloudflare.com" target="_blank" style="color: var(--primary);">Cloudflare Dashboard</a>.</li>
+        <li>Click <strong>Add a site</strong>, enter your purchased domain name (e.g., <code>yourdomain.com</code>), and select the <strong>Free</strong> plan.</li>
+        <li>Cloudflare will assign you <strong>2 Cloudflare Nameservers</strong> (e.g., <code>ada.ns.cloudflare.com</code> and <code>bob.ns.cloudflare.com</code>).</li>
+      </ol>
+
+      <h3>Step 7.2: Update Nameservers at Your Domain Registrar</h3>
+      <ol>
+        <li>Log into the account where you bought your domain (Namecheap, GoDaddy, Hostinger, Porkbun, Google Domains, etc.).</li>
+        <li>Navigate to <strong>DNS / Nameservers</strong> settings for <code>yourdomain.com</code>.</li>
+        <li>Switch the Nameserver setting to <strong>Custom DNS / Custom Nameservers</strong>.</li>
+        <li>Paste the 2 Cloudflare Nameservers and click <strong>Save</strong>. (DNS propagation usually takes 5–15 minutes).</li>
+      </ol>
+
+      <h3>Step 7.3: Create Cloudflare Tunnel in Zero Trust</h3>
+      <ol>
+        <li>In your Cloudflare Dashboard, click <strong>Zero Trust</strong> in the left sidebar.</li>
+        <li>Navigate to <strong>Networks</strong> → <strong>Tunnels</strong> → click <strong>Create a Tunnel</strong>.</li>
+        <li>Select <strong>Cloudflared</strong> as connector → Click <strong>Next</strong>.</li>
+        <li>Name your tunnel: <code>pms-ubuntu-server</code> → Click <strong>Save tunnel</strong>.</li>
+      </ol>
+
+      <h3>Step 7.4: Install & Run <code>cloudflared</code> Daemon on Ubuntu Server</h3>
+      <p>Under <strong>Choose an environment</strong>, select <strong>Debian / Ubuntu</strong>. Copy and execute:</p>
+      <div class="code-wrapper">
+        <div class="code-header"><span>Terminal</span><button class="copy-btn">Copy</button></div>
+        <pre><code># Download cloudflared Debian package
+curl -L --output cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
+
+# Install package
+sudo dpkg -i cloudflared.deb
+
+# Install and run cloudflared service with your unique tunnel token
+sudo cloudflared service install &lt;PASTE_YOUR_CLOUDFLARED_TOKEN_FROM_DASHBOARD&gt;
+
+# Verify service is active and connected
+sudo systemctl status cloudflared</code></pre>
+      </div>
+
+      <h3>Step 7.5: Map Public Hostnames in Cloudflare Tunnel Dashboard</h3>
+      <p>In the Cloudflare Tunnel <strong>Public Hostname</strong> tab, click <strong>Add a public hostname</strong> for each of the following routes:</p>
+
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Subdomain</th>
+              <th>Domain</th>
+              <th>Type</th>
+              <th>URL / Target</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>www</code></td>
+              <td><code>yourdomain.com</code></td>
+              <td><code>HTTP</code></td>
+              <td><code>localhost:3002</code></td>
+              <td><strong>Next.js Web Frontend App</strong></td>
+            </tr>
+            <tr>
+              <td><em>(Leave Blank / @)</em></td>
+              <td><code>yourdomain.com</code></td>
+              <td><code>HTTP</code></td>
+              <td><code>localhost:3002</code></td>
+              <td><strong>Root Domain Redirect</strong></td>
+            </tr>
+            <tr>
+              <td><code>api</code></td>
+              <td><code>yourdomain.com</code></td>
+              <td><code>HTTP</code></td>
+              <td><code>localhost:3001</code></td>
+              <td><strong>NestJS Backend REST API</strong></td>
+            </tr>
+            <tr>
+              <td><code>storage</code> <em>(Optional)</em></td>
+              <td><code>yourdomain.com</code></td>
+              <td><code>HTTP</code></td>
+              <td><code>localhost:9000</code></td>
+              <td><strong>MinIO S3 File Storage</strong></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout callout-success">
+        <div class="callout-title">🎉 You're Live!</div>
+        <p style="margin: 0;">Once saved, visit <strong>https://www.yourdomain.com</strong>. Your app will load securely over HTTPS with Cloudflare shielding your dynamic IP address!</p>
+      </div>
+    </section>
+
+    <!-- Phase 8 -->
+    <section id="phase-8">
+      <h2>☁️ Phase 8: Automated Nightly Backups to Google Drive</h2>
+      <p>Protect your database against accidental deletion or hardware failures by scheduling automated nightly backups to Google Drive with 7-day rolling retention.</p>
+
+      <h3>8.1 Connect Google Drive via <code>rclone</code></h3>
+      <div class="code-wrapper">
+        <div class="code-header"><span>Terminal</span><button class="copy-btn">Copy</button></div>
+        <pre><code>rclone config</code></pre>
+      </div>
+      <ol>
+        <li>Type <code>n</code> for <strong>New remote</strong> and name it <code>gdrive</code>.</li>
+        <li>Select <strong>Google Drive</strong> from the list of cloud storage providers.</li>
+        <li>Leave Client ID / Secret blank (press <code>Enter</code>).</li>
+        <li>Access Scope: Select <code>1</code> (Full access).</li>
+        <li>Auto-config: Select <code>N</code> (for remote headless CLI), open the authorization link in your browser, sign in, and paste the verification code.</li>
+      </ol>
+
+      <h3>8.2 Create Backup Script (<code>~/pms/backup-to-gdrive.sh</code>)</h3>
+      <div class="code-wrapper">
+        <div class="code-header"><span>~/pms/backup-to-gdrive.sh</span><button class="copy-btn">Copy</button></div>
+        <pre><code>#!/bin/bash
+set -e
+
+BACKUP_DIR="$HOME/pms-backups"
+TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
+DB_CONTAINER="pms_postgres"
+DB_USER="pms"
+DB_NAME="pms"
+GDRIVE_REMOTE="gdrive:PMS_Backups"
+RETENTION_DAYS=7
+
+echo "[$(date)] 🚀 Starting Daily Database Backup..."
+
+mkdir -p "$BACKUP_DIR"
+BACKUP_FILE="$BACKUP_DIR/pms_backup_$TIMESTAMP.sql.gz"
+
+echo "📦 Dumping database from container '$DB_CONTAINER'..."
+docker exec -t "$DB_CONTAINER" pg_dump -U "$DB_USER" "$DB_NAME" | gzip > "$BACKUP_FILE"
+
+echo "☁️ Uploading to Google Drive ($GDRIVE_REMOTE)..."
+rclone copy "$BACKUP_FILE" "$GDRIVE_REMOTE"
+
+echo "🧹 Pruning Google Drive backups older than $RETENTION_DAYS days..."
+rclone delete --min-age "${RETENTION_DAYS}d" "$GDRIVE_REMOTE"
+
+find "$BACKUP_DIR" -type f -name "*.sql.gz" -mtime +$RETENTION_DAYS -exec rm -f {} \;
+echo "[$(date)] 🎉 Nightly backup finished successfully!"</code></pre>
+      </div>
+
+      <div class="code-wrapper">
+        <div class="code-header"><span>Terminal — Make Executable</span><button class="copy-btn">Copy</button></div>
+        <pre><code>chmod +x ~/pms/backup-to-gdrive.sh
+~/pms/backup-to-gdrive.sh</code></pre>
+      </div>
+
+      <h3>8.3 Schedule Nightly Cron Job (@ 2:00 AM)</h3>
+      <div class="code-wrapper">
+        <div class="code-header"><span>Terminal</span><button class="copy-btn">Copy</button></div>
+        <pre><code>crontab -e
+
+# Add this line to the bottom of your crontab:
+0 2 * * * $HOME/pms/backup-to-gdrive.sh >> $HOME/pms/backup.log 2>&1</code></pre>
+      </div>
+    </section>
+
+    <!-- Phase 9 -->
+    <section id="phase-9">
+      <h2>🔄 Phase 9: 1-Click Code Update Script</h2>
+      <p>Whenever you push new code changes from your development laptop to GitHub, use this script to pull, build, and restart production services in a single command.</p>
+
+      <h3>9.1 Create Update Script (<code>~/pms/update-live.sh</code>)</h3>
+      <div class="code-wrapper">
+        <div class="code-header"><span>~/pms/update-live.sh</span><button class="copy-btn">Copy</button></div>
+        <pre><code>#!/bin/bash
+set -e
+
+echo "🚀 Starting 1-Click Production Deployment"
+cd "$HOME/pms"
+
+echo "📥 1. Pulling latest code from Git..."
+git pull origin main
+
+echo "📦 2. Installing dependencies..."
+pnpm install
+
+echo "🗄️ 3. Running Prisma migrations..."
+pnpm --filter @pms/api prisma:migrate
+
+echo "🏗️ 4. Building Backend API, Worker & Web App..."
+pnpm --filter @pms/api build
+pnpm --filter @pms/worker build
+pnpm --filter @pms/web build
+
+echo "🔄 5. Restarting PM2 process manager..."
+pm2 restart ecosystem.config.js
+
+echo "✅ Production Deployment Complete!"</code></pre>
+      </div>
+
+      <div class="code-wrapper">
+        <div class="code-header"><span>Terminal</span><button class="copy-btn">Copy</button></div>
+        <pre><code>chmod +x ~/pms/update-live.sh
+
+# Run whenever you want to update production:
+cd ~/pms && ./update-live.sh</code></pre>
+      </div>
+    </section>
+
+    <!-- Phase 10 -->
+    <section id="phase-10">
+      <h2>🛠️ Phase 10: Server Maintenance & Troubleshooting Matrix</h2>
+      <p>Quick reference commands for monitoring server health and resolving common issues.</p>
+
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Task</th>
+              <th>Terminal Command</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Check PM2 Live App Logs</strong></td>
+              <td><code>pm2 logs</code> or <code>pm2 logs pms-api</code></td>
+            </tr>
+            <tr>
+              <td><strong>Check PM2 Service Status</strong></td>
+              <td><code>pm2 status</code></td>
+            </tr>
+            <tr>
+              <td><strong>Restart All Services</strong></td>
+              <td><code>pm2 restart ecosystem.config.js</code></td>
+            </tr>
+            <tr>
+              <td><strong>Check Docker Container Health</strong></td>
+              <td><code>docker compose ps</code></td>
+            </tr>
+            <tr>
+              <td><strong>View Postgres Database Logs</strong></td>
+              <td><code>docker compose logs -f postgres</code></td>
+            </tr>
+            <tr>
+              <td><strong>Check Cloudflare Tunnel Status</strong></td>
+              <td><code>sudo systemctl status cloudflared</code></td>
+            </tr>
+            <tr>
+              <td><strong>Run Manual Cloud Backup</strong></td>
+              <td><code>~/pms/backup-to-gdrive.sh</code></td>
+            </tr>
+            <tr>
+              <td><strong>View Daily Backup Log</strong></td>
+              <td><code>cat ~/pms/backup.log</code></td>
+            </tr>
+            <tr>
+              <td><strong>Check Free RAM & Disk Space</strong></td>
+              <td><code>free -h && df -h</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Common Diagnostic Tips</h3>
+      <ul>
+        <li><strong>Port 3001 already in use:</strong> Find process with <code>sudo lsof -i :3001</code> and kill it with <code>sudo kill -9 &lt;PID&gt;</code>, then run <code>pm2 restart pms-api</code>.</li>
+        <li><strong>Database connection refused:</strong> Ensure Docker containers are running using <code>docker compose restart postgres</code>.</li>
+        <li><strong>CORS errors on web frontend:</strong> Verify your custom domain is listed in <code>CORS_ORIGIN</code> inside <code>~/pms/apps/api/.env</code>.</li>
+      </ul>
+    </section>
+  </main>
+
+  <!-- Interactive JavaScript for Copy Buttons and Checklists -->
+  <script>
+    // Copy Code Button functionality
+    document.querySelectorAll('.copy-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const wrapper = btn.closest('.code-wrapper');
+        const codeText = wrapper.querySelector('pre code').innerText;
+        
+        navigator.clipboard.writeText(codeText).then(() => {
+          const originalText = btn.innerText;
+          btn.innerText = 'Copied! ✓';
+          btn.classList.add('copied');
+          setTimeout(() => {
+            btn.innerText = originalText;
+            btn.classList.remove('copied');
+          }, 2000);
+        });
+      });
+    });
+
+    // Checkbox LocalStorage Persistence
+    const checklistItems = document.querySelectorAll('#deployment-checklist input[type="checkbox"]');
+    
+    checklistItems.forEach(checkbox => {
+      const key = 'pms_deploy_check_' + checkbox.dataset.key;
+      const savedState = localStorage.getItem(key);
+      
+      if (savedState === 'true') {
+        checkbox.checked = true;
+        checkbox.closest('.checklist-item').classList.add('checked');
+      }
+
+      checkbox.addEventListener('change', () => {
+        localStorage.setItem(key, checkbox.checked);
+        if (checkbox.checked) {
+          checkbox.closest('.checklist-item').classList.add('checked');
+        } else {
+          checkbox.closest('.checklist-item').classList.remove('checked');
+        }
+      });
+    });
+
+    // Sidebar active section highlighting on scroll
+    const sections = document.querySelectorAll('main section');
+    const navLinks = document.querySelectorAll('.nav-link');
+
+    window.addEventListener('scroll', () => {
+      let current = '';
+      sections.forEach(section => {
+        const sectionTop = section.offsetTop;
+        if (pageYOffset >= sectionTop - 150) {
+          current = section.getAttribute('id');
+        }
+      });
+
+      navLinks.forEach(link => {
+        link.classList.remove('active');
+        if (link.getAttribute('href') === `#${current}`) {
+          link.classList.add('active');
+        }
+      });
+    });
+  </script>
+</body>
+</html>
