@@ -149,48 +149,42 @@ export default function HomePage() {
       )}
 
       {/* HEADER:
-          - Sits directly over the dark hero banner with ZERO white bar
+          - Sits directly over the dark hero banner with ZERO white bar behind it
+          - Exact dashboard glassmorphism styling: bg-white/80 backdrop-blur-md border border-white/60 shadow-xs
           - Non-sticky on mobile (relative), sticky glassmorphism on desktop (sm:sticky sm:top-3)
-          - Sleek dark glassmorphic styling (bg-slate-950/40 backdrop-blur-md border border-white/15 text-white)
       */}
       <div className="relative sm:sticky sm:top-3 z-40 mx-auto max-w-7xl px-3 sm:px-6 pt-3 sm:pt-4 -mb-[4.75rem] sm:-mb-[5rem] pointer-events-none">
-        <header 
-          className={`pointer-events-auto flex min-h-[3.75rem] items-center justify-between rounded-xl sm:rounded-2xl border px-4 sm:px-6 transition-all duration-300 ${
-            isScrolled
-              ? 'border-white/20 bg-slate-900/90 backdrop-blur-md shadow-2xl text-white'
-              : 'border-white/15 bg-slate-950/40 backdrop-blur-md shadow-lg text-white'
-          }`}
-        >
+        <header className="pointer-events-auto flex min-h-[3.75rem] items-center justify-between rounded-xl sm:rounded-2xl border border-white/60 bg-white/80 backdrop-blur-md px-4 sm:px-6 shadow-xs transition-all">
           {/* Logo & Brand Info */}
           <Link href="/" className="flex items-center gap-3 group">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-white font-black text-base shadow-sm group-hover:scale-105 transition-transform">
               SU
             </div>
             <div>
-              <span className="text-base sm:text-lg font-black tracking-tight text-white block leading-tight">
+              <span className="text-base sm:text-lg font-black tracking-tight text-slate-900 block leading-tight">
                 SU Developers
               </span>
-              <p className="text-[11px] font-medium text-slate-300 leading-none mt-0.5">
-                Marketed by <span className="text-blue-400 font-semibold">SS Estate & Marketing</span>
+              <p className="text-[11px] font-medium text-slate-500 leading-none mt-0.5">
+                Marketed by <span className="text-primary font-semibold">SS Estate & Marketing</span>
               </p>
             </div>
           </Link>
 
           {/* Desktop Navigation Links */}
-          <nav className="hidden md:flex items-center gap-7 text-sm font-semibold text-slate-200">
-            <a href="#announcements" className="hover:text-white transition-colors">
+          <nav className="hidden md:flex items-center gap-7 text-sm font-semibold text-slate-600">
+            <a href="#announcements" className="hover:text-primary transition-colors">
               Announcements
             </a>
-            <a href="#updates" className="hover:text-white transition-colors">
+            <a href="#updates" className="hover:text-primary transition-colors">
               News & Milestones
             </a>
-            <a href="#quick-portal" className="hover:text-white transition-colors">
+            <a href="#quick-portal" className="hover:text-primary transition-colors">
               Plot Portal
             </a>
-            <a href="#about" className="hover:text-white transition-colors">
+            <a href="#about" className="hover:text-primary transition-colors">
               About Project
             </a>
-            <a href="#contact" className="hover:text-white transition-colors">
+            <a href="#contact" className="hover:text-primary transition-colors">
               Contact
             </a>
           </nav>
@@ -206,7 +200,7 @@ export default function HomePage() {
             </Link>
             <Link
               href="/login"
-              className="inline-flex items-center gap-1.5 rounded-xl border border-white/20 bg-white/10 px-3.5 py-2.5 text-xs font-semibold text-white hover:bg-white/20 transition backdrop-blur-md shadow-2xs"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition shadow-2xs"
             >
               Staff Login
             </Link>
@@ -217,7 +211,7 @@ export default function HomePage() {
             <button
               type="button"
               onClick={() => setMobileDrawerOpen(true)}
-              className="p-2 rounded-xl text-white hover:bg-white/10 transition"
+              className="p-2 rounded-xl text-slate-700 hover:bg-slate-100 transition"
               aria-label="Open Navigation Menu"
             >
               <Menu className="h-6 w-6" />
