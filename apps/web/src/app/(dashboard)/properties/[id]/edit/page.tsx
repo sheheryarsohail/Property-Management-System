@@ -37,6 +37,7 @@ export default function EditPropertyPage() {
     autoReceiptGeneration: true,
     pricePerSqYd: '',
     discount: '',
+    ownMoney: '',
     pricingMethod: 'SQ_YD',
   })
 
@@ -45,6 +46,7 @@ export default function EditPropertyPage() {
     const size = parseFloat(formData.sizeSqYd) || 0;
     const price = parseFloat(formData.pricePerSqYd) || 0;
     const discount = parseFloat(formData.discount) || 0;
+    const ownMoney = parseFloat(formData.ownMoney) || 0;
     
     if (formData.pricingMethod === 'SQ_YD') {
       if (size > 0 && price > 0) {
@@ -55,7 +57,7 @@ export default function EditPropertyPage() {
         if (formData.isRoadFacing) extra += base * 0.10;
         if (formData.isParkingFacing) extra += base * 0.10;
         
-        const total = base + extra - discount;
+        const total = base + extra + ownMoney - discount;
         setFormData(prev => {
           if (prev.totalPrice !== total.toString()) {
             return { ...prev, totalPrice: total.toString() }
@@ -68,6 +70,7 @@ export default function EditPropertyPage() {
     formData.sizeSqYd, 
     formData.pricePerSqYd, 
     formData.discount, 
+    formData.ownMoney,
     formData.isCorner,
     formData.isWestOpen,
     formData.isRoadFacing,
@@ -100,6 +103,7 @@ export default function EditPropertyPage() {
         autoReceiptGeneration: property.autoReceiptGeneration ?? true,
         pricePerSqYd: property.pricePerSqYd ? String(property.pricePerSqYd) : '',
         discount: property.discount ? String(property.discount) : '',
+        ownMoney: property.ownMoney ? String(property.ownMoney) : '',
         pricingMethod: property.pricePerSqYd ? 'SQ_YD' : 'TOTAL',
       })
     }
@@ -188,6 +192,7 @@ export default function EditPropertyPage() {
       address: formData.address || '',
       pricePerSqYd: formData.pricePerSqYd ? parseFloat(formData.pricePerSqYd) : null,
       discount: formData.discount ? parseFloat(formData.discount) : null,
+      ownMoney: formData.ownMoney ? parseFloat(formData.ownMoney) : null,
       totalPrice: formData.totalPrice ? parseFloat(formData.totalPrice) : null,
       isCorner: formData.isCorner,
       isWestOpen: formData.isWestOpen,
@@ -334,7 +339,7 @@ export default function EditPropertyPage() {
                 </div>
               </div>
               <div className="grid gap-4 md:grid-cols-2">
-                <div>
+                <div className="md:col-span-2">
                   <label className="mb-2 block text-sm font-medium">Price per Sq. Yd.</label>
                   <input
                     type="number"
@@ -347,14 +352,25 @@ export default function EditPropertyPage() {
                   />
                 </div>
                 <div>
-                  <label className="mb-2 block text-sm font-medium">Discount</label>
+                  <label className="mb-2 block text-sm font-medium text-emerald-600">Own Money (Added)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={formData.ownMoney}
+                    onChange={(e) => setFormData({ ...formData, ownMoney: e.target.value })}
+                    className="w-full rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    placeholder="0.00 (e.g. 50000)"
+                  />
+                </div>
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-rose-600">Discount (Subtracted)</label>
                   <input
                     type="number"
                     step="0.01"
                     value={formData.discount}
                     onChange={(e) => setFormData({ ...formData, discount: e.target.value })}
                     className="w-full rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                    placeholder="0.00"
+                    placeholder="0.00 (e.g. 50000)"
                   />
                 </div>
                 <div className="md:col-span-2">
@@ -368,8 +384,10 @@ export default function EditPropertyPage() {
                     className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none font-semibold text-primary ${formData.pricingMethod === 'SQ_YD' ? 'bg-muted cursor-not-allowed' : 'bg-background focus:ring-2 focus:ring-primary'}`}
                     placeholder="0.00"
                   />
-                  {formData.pricingMethod === 'TOTAL' && (
+                  {formData.pricingMethod === 'TOTAL' ? (
                     <p className="mt-1 text-xs text-muted-foreground">Fixed base price for this property.</p>
+                  ) : (
+                    <p className="mt-1 text-xs text-muted-foreground">Automatically calculated including features (+), own money (+), and discount (-).</p>
                   )}
                 </div>
               </div>

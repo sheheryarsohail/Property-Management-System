@@ -36,6 +36,7 @@ export default function AssignPropertyPage() {
     installmentMonths: '50',
     totalPrice: '',
     discount: '',
+    ownMoney: '',
   })
 
   useEffect(() => {
@@ -50,6 +51,7 @@ export default function AssignPropertyPage() {
         installmentMonths: property.installmentMonths ? String(property.installmentMonths) : '50',
         totalPrice: property.totalPrice ? String(property.totalPrice) : '',
         discount: '',
+        ownMoney: '',
       })
     }
   }, [property])
@@ -58,7 +60,8 @@ export default function AssignPropertyPage() {
   useEffect(() => {
     const baseTotal = parseFloat(property?.totalPrice || 0);
     const discount = parseFloat(overrides.discount) || 0;
-    const total = baseTotal > 0 ? baseTotal - discount : 0;
+    const ownMoney = parseFloat(overrides.ownMoney) || 0;
+    const total = (baseTotal + ownMoney - discount) > 0 ? (baseTotal + ownMoney - discount) : 0;
 
     if (total > 0) {
       const booking = parseFloat(overrides.bookingPrice) || 0;
@@ -80,6 +83,7 @@ export default function AssignPropertyPage() {
   }, [
     property?.totalPrice,
     overrides.discount,
+    overrides.ownMoney,
     overrides.bookingPrice,
     overrides.confirmationPrice,
     overrides.installmentMonths
@@ -122,6 +126,7 @@ export default function AssignPropertyPage() {
       installmentMonths: overrides.installmentMonths ? parseInt(overrides.installmentMonths) : 50,
       totalPrice: overrides.totalPrice ? parseFloat(overrides.totalPrice) : null,
       discount: overrides.discount ? parseFloat(overrides.discount) : null,
+      ownMoney: overrides.ownMoney ? parseFloat(overrides.ownMoney) : null,
     } : {
       autoReceiptGeneration: overrides.autoReceiptGeneration,
       bookingPrice: null,
@@ -132,6 +137,7 @@ export default function AssignPropertyPage() {
       installmentMonths: null,
       totalPrice: overrides.totalPrice ? parseFloat(overrides.totalPrice) : null,
       discount: overrides.discount ? parseFloat(overrides.discount) : null,
+      ownMoney: overrides.ownMoney ? parseFloat(overrides.ownMoney) : null,
     };
 
     assignMutation.mutate({
@@ -231,20 +237,35 @@ export default function AssignPropertyPage() {
 
                 {generatePlan && (
                   <div className="grid gap-4 md:grid-cols-2 p-4 border rounded-md">
-                  <div className="md:col-span-2">
-                    <label className="mb-2 block text-sm font-medium">Discount (at Assignment)</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={overrides.discount}
-                      onChange={(e) => setOverrides({ ...overrides, discount: e.target.value })}
-                      className="w-full rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                      placeholder="e.g. 50000"
-                    />
-                    {overrides.discount && (
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        Adjusted Total Price: <span className="font-semibold text-primary">{formatCurrency(Number(overrides.totalPrice))}</span>
-                      </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:col-span-2">
+                    <div>
+                      <label className="mb-2 block text-sm font-medium text-emerald-600">Own Money (at Assignment)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={overrides.ownMoney}
+                        onChange={(e) => setOverrides({ ...overrides, ownMoney: e.target.value })}
+                        className="w-full rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                        placeholder="e.g. 50000 (added)"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-2 block text-sm font-medium text-rose-600">Discount (at Assignment)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={overrides.discount}
+                        onChange={(e) => setOverrides({ ...overrides, discount: e.target.value })}
+                        className="w-full rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                        placeholder="e.g. 50000 (subtracted)"
+                      />
+                    </div>
+                    {(overrides.discount || overrides.ownMoney) && (
+                      <div className="md:col-span-2">
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          Adjusted Total Price: <span className="font-semibold text-primary">{formatCurrency(Number(overrides.totalPrice))}</span>
+                        </p>
+                      </div>
                     )}
                   </div>
                   <div className="space-y-4">

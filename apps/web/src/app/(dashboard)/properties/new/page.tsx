@@ -23,6 +23,7 @@ export default function NewPropertyPage() {
     pricePerSqYd: '',
     fixedBasePrice: '',
     discount: '',
+    ownMoney: '',
     totalPrice: '',
     isCorner: false,
     isWestOpen: false,
@@ -36,6 +37,7 @@ export default function NewPropertyPage() {
     const size = parseFloat(formData.sizeSqYd) || 0;
     const price = parseFloat(formData.pricePerSqYd) || 0;
     const discount = parseFloat(formData.discount) || 0;
+    const ownMoney = parseFloat(formData.ownMoney) || 0;
     const fixedBase = parseFloat(formData.fixedBasePrice) || 0;
     
     let total = 0;
@@ -48,7 +50,7 @@ export default function NewPropertyPage() {
         if (formData.isRoadFacing) extra += base * 0.10;
         if (formData.isParkingFacing) extra += base * 0.10;
         
-        total = base + extra - discount;
+        total = base + extra + ownMoney - discount;
       }
     } else {
       if (fixedBase > 0) {
@@ -58,7 +60,7 @@ export default function NewPropertyPage() {
         if (formData.isRoadFacing) extra += fixedBase * 0.10;
         if (formData.isParkingFacing) extra += fixedBase * 0.10;
         
-        total = fixedBase + extra - discount;
+        total = fixedBase + extra + ownMoney - discount;
       }
     }
 
@@ -73,6 +75,7 @@ export default function NewPropertyPage() {
     formData.pricePerSqYd, 
     formData.fixedBasePrice,
     formData.discount, 
+    formData.ownMoney,
     formData.isCorner,
     formData.isWestOpen,
     formData.isRoadFacing,
@@ -162,6 +165,7 @@ export default function NewPropertyPage() {
       sizeSqYd: formData.sizeSqYd ? parseFloat(formData.sizeSqYd) : null,
       pricePerSqYd: formData.pricePerSqYd ? parseFloat(formData.pricePerSqYd) : null,
       discount: formData.discount ? parseFloat(formData.discount) : null,
+      ownMoney: formData.ownMoney ? parseFloat(formData.ownMoney) : null,
       totalPrice: formData.totalPrice ? parseFloat(formData.totalPrice) : null,
       isCorner: formData.isCorner,
       isWestOpen: formData.isWestOpen,
@@ -339,7 +343,7 @@ export default function NewPropertyPage() {
                 </div>
               </div>
               <div className="grid gap-4 md:grid-cols-2">
-                <div>
+                <div className={formData.pricingMethod === 'TOTAL' ? '' : 'md:col-span-2'}>
                   <label className="mb-2 block text-sm font-medium">Price per Sq. Yd.</label>
                   <input
                     type="number"
@@ -351,43 +355,52 @@ export default function NewPropertyPage() {
                     placeholder="0.00"
                   />
                 </div>
+                {formData.pricingMethod === 'TOTAL' && (
+                  <div>
+                    <label className="mb-2 block text-sm font-medium">Fixed Base Price</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={formData.fixedBasePrice}
+                      onChange={(e) => setFormData({ ...formData, fixedBasePrice: e.target.value })}
+                      className="w-full rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                      placeholder="0.00"
+                    />
+                  </div>
+                )}
                 <div>
-                  <label className="mb-2 block text-sm font-medium">Discount</label>
+                  <label className="mb-2 block text-sm font-medium text-emerald-600">Own Money (Added)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={formData.ownMoney}
+                    onChange={(e) => setFormData({ ...formData, ownMoney: e.target.value })}
+                    className="w-full rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    placeholder="0.00 (e.g. 50000)"
+                  />
+                </div>
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-rose-600">Discount (Subtracted)</label>
                   <input
                     type="number"
                     step="0.01"
                     value={formData.discount}
                     onChange={(e) => setFormData({ ...formData, discount: e.target.value })}
                     className="w-full rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                    placeholder="0.00"
+                    placeholder="0.00 (e.g. 50000)"
                   />
                 </div>
-                <div className="md:col-span-2 grid gap-4 md:grid-cols-2">
-                  {formData.pricingMethod === 'TOTAL' && (
-                    <div>
-                      <label className="mb-2 block text-sm font-medium">Fixed Base Price</label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        value={formData.fixedBasePrice}
-                        onChange={(e) => setFormData({ ...formData, fixedBasePrice: e.target.value })}
-                        className="w-full rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                        placeholder="0.00"
-                      />
-                    </div>
-                  )}
-                  <div className={formData.pricingMethod === 'SQ_YD' ? "md:col-span-2" : ""}>
-                    <label className="mb-2 block text-sm font-medium">Final Total Price</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      readOnly
-                      value={formData.totalPrice}
-                      className="w-full rounded-lg border px-3 py-2 text-sm font-semibold text-primary bg-muted cursor-not-allowed focus:outline-none"
-                      placeholder="0.00"
-                    />
-                    <p className="mt-1 text-xs text-muted-foreground">Automatically calculated including features and discounts.</p>
-                  </div>
+                <div className="md:col-span-2">
+                  <label className="mb-2 block text-sm font-medium">Final Total Price</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    readOnly
+                    value={formData.totalPrice}
+                    className="w-full rounded-lg border px-3 py-2 text-sm font-semibold text-primary bg-muted cursor-not-allowed focus:outline-none"
+                    placeholder="0.00"
+                  />
+                  <p className="mt-1 text-xs text-muted-foreground">Automatically calculated including features (+), own money (+), and discount (-).</p>
                 </div>
               </div>
             </div>

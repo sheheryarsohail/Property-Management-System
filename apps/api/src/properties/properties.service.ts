@@ -131,7 +131,8 @@ export class PropertiesService {
     const sizeSqYd = input.sizeSqYd ?? 0;
     const pricePerSqYd = input.pricePerSqYd ?? 0;
     const discount = input.discount ?? 0;
-    const totalPrice = input.totalPrice ?? ((sizeSqYd * pricePerSqYd) - discount);
+    const ownMoney = input.ownMoney ?? 0;
+    const totalPrice = input.totalPrice ?? ((sizeSqYd * pricePerSqYd) + ownMoney - discount);
 
     return this.prisma.property.create({
       data: {
@@ -146,6 +147,7 @@ export class PropertiesService {
         status: 'AVAILABLE', // Defaults to AVAILABLE
         pricePerSqYd: input.pricePerSqYd,
         discount: input.discount,
+        ownMoney: input.ownMoney,
         totalPrice: totalPrice,
         bookingPrice: input.bookingPrice,
         confirmationPrice: input.confirmationPrice,

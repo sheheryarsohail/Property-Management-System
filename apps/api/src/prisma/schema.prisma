@@ -75,6 +75,7 @@ model Property {
   status                PropertyStatus      @default(AVAILABLE)
   pricePerSqYd          Decimal?            @db.Decimal(14, 2)
   discount              Decimal?            @default(0) @db.Decimal(14, 2)
+  ownMoney              Decimal?            @default(0) @db.Decimal(14, 2)
   totalPrice            Decimal?            @db.Decimal(14, 2)
   bookingPrice          Decimal?            @db.Decimal(14, 2)
   confirmationPrice     Decimal?            @db.Decimal(14, 2)

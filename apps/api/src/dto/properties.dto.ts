@@ -31,6 +31,9 @@ export class CreatePropertyDto {
   discount?: number;
 
   @IsOptional() @IsNumber()
+  ownMoney?: number;
+
+  @IsOptional() @IsNumber()
   bookingPrice?: number;
 
   @IsOptional() @IsNumber()
