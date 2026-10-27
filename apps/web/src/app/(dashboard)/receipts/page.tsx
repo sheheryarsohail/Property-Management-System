@@ -22,17 +22,20 @@ import {
   ArrowRightLeft,
   GitMerge,
   Pencil,
+  Trash2,
 } from 'lucide-react'
 import { FilterDrawer } from '@/components/FilterDrawer'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { useAuth } from '@/lib/auth-context'
 import { EditReceiptDialog } from './edit-receipt-dialog'
+import { DeleteReceiptDialog } from './delete-receipt-dialog'
 
 export default function ReceiptsPage() {
   const { user } = useAuth()
   const isSuperAdmin = user?.role === 'SUPER_ADMIN'
   const [editingReceipt, setEditingReceipt] = useState<any | null>(null)
+  const [deletingReceipt, setDeletingReceipt] = useState<any | null>(null)
 
   const [search, setSearch] = useState('')
   const [timeFilter, setTimeFilter] = useState<string>('all')
@@ -573,7 +576,7 @@ export default function ReceiptsPage() {
                       <th className="px-4 py-3.5 text-center font-semibold text-slate-600">Status</th>
                       <th className="px-4 py-3.5 text-center font-semibold text-slate-600">PDF</th>
                       {isSuperAdmin && (
-                        <th className="px-4 py-3.5 text-center font-semibold text-slate-600">Edit</th>
+                        <th className="px-4 py-3.5 text-center font-semibold text-slate-600">Actions</th>
                       )}
                     </tr>
                   </thead>
@@ -628,17 +631,30 @@ export default function ReceiptsPage() {
                           </td>
                           {isSuperAdmin && (
                             <td className="px-4 py-3.5 text-center">
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  setEditingReceipt(receipt)
-                                }}
-                                className="rounded-lg p-1.5 text-slate-400 hover:bg-amber-50 hover:text-amber-600 transition"
-                                title="Edit Receipt (Super Admin Only)"
-                                aria-label="Edit Receipt"
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </button>
+                              <div className="flex items-center justify-center gap-1">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    setEditingReceipt(receipt)
+                                  }}
+                                  className="rounded-lg p-1.5 text-slate-400 hover:bg-amber-50 hover:text-amber-600 transition"
+                                  title="Edit Receipt (Super Admin Only)"
+                                  aria-label="Edit Receipt"
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    setDeletingReceipt(receipt)
+                                  }}
+                                  className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition"
+                                  title="Delete Receipt (Super Admin Only)"
+                                  aria-label="Delete Receipt"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              </div>
                             </td>
                           )}
                         </tr>
@@ -721,14 +737,24 @@ export default function ReceiptsPage() {
                           PDF
                         </button>
                         {isSuperAdmin && (
-                          <button
-                            onClick={() => setEditingReceipt(receipt)}
-                            className="inline-flex items-center gap-1 rounded-xl border border-amber-200 bg-amber-50/80 px-2.5 py-1.5 text-xs font-semibold text-amber-700 hover:bg-amber-100 transition shadow-2xs"
-                            title="Edit Receipt (Super Admin Only)"
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                            Edit
-                          </button>
+                          <>
+                            <button
+                              onClick={() => setEditingReceipt(receipt)}
+                              className="inline-flex items-center gap-1 rounded-xl border border-amber-200 bg-amber-50/80 px-2.5 py-1.5 text-xs font-semibold text-amber-700 hover:bg-amber-100 transition shadow-2xs"
+                              title="Edit Receipt (Super Admin Only)"
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => setDeletingReceipt(receipt)}
+                              className="inline-flex items-center gap-1 rounded-xl border border-rose-200 bg-rose-50/80 px-2.5 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-100 transition shadow-2xs"
+                              title="Delete Receipt (Super Admin Only)"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                              Delete
+                            </button>
+                          </>
                         )}
                       </div>
                     </div>
@@ -770,6 +796,15 @@ export default function ReceiptsPage() {
         open={!!editingReceipt}
         onOpenChange={(open) => {
           if (!open) setEditingReceipt(null)
+        }}
+        onDelete={(rcp) => setDeletingReceipt(rcp)}
+      />
+
+      <DeleteReceiptDialog
+        receipt={deletingReceipt}
+        open={!!deletingReceipt}
+        onOpenChange={(open) => {
+          if (!open) setDeletingReceipt(null)
         }}
       />
     </div>

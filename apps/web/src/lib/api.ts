@@ -285,6 +285,7 @@ export const receiptsApi = {
   get: (id: string) => unwrap<any>(api.get(`/receipts/${id}`)),
   create: (data: any) => unwrap<any>(api.post('/receipts', data)),
   update: (id: string, data: any) => unwrap<any>(api.put(`/receipts/${id}`, data)),
+  delete: (id: string) => unwrap<any>(api.delete(`/receipts/${id}`)),
   downloadPdf: (id: string) => downloadFile(`/receipts/${id}/pdf`, `receipt-${id}.pdf`),
 }
 

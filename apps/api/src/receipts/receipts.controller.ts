@@ -1,4 +1,4 @@
-import { BadRequestException, Controller, Get, NotFoundException, Param, Query, Req, Res, Post, Body, Put, ForbiddenException } from '@nestjs/common';
+import { BadRequestException, Controller, Get, NotFoundException, Param, Query, Req, Res, Post, Body, Put, Delete, ForbiddenException } from '@nestjs/common';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { ReceiptsService } from './receipts.service';
 import { StorageService } from '../storage/storage.service';
@@ -82,6 +82,30 @@ export class ReceiptsController {
     }
     const tenantId = (req.headers['x-tenant-id'] as string) || (user.tenantId) || process.env.DEFAULT_TENANT_ID || 't_local';
     return this.receiptsService.update(tenantId, id, body, user);
+  }
+
+  @Delete(':id')
+  async delete(
+    @Param('id') id: string,
+    @Req() req: FastifyRequest,
+  ) {
+    let user = (req as any).user;
+    if (!user) {
+      const authz = (req.headers['authorization'] as string) || '';
+      if (/^bearer\s+/i.test(authz)) {
+        const token = authz.replace(/^bearer\s+/i, '').trim();
+        const secret = process.env.JWT_SECRET || '02c69f4cc9d911c4b97ab30567b8b786dda00b8f2cead185b23ca01f892d62aa';
+        const payload = verifyJwtToken(token, secret);
+        if (payload?.sub) {
+          user = await this.receiptsService.findUserById(payload.sub);
+        }
+      }
+    }
+    if (!user || user.role !== 'SUPER_ADMIN') {
+      throw new ForbiddenException('Only super admin can delete generated receipts');
+    }
+    const tenantId = (req.headers['x-tenant-id'] as string) || (user.tenantId) || process.env.DEFAULT_TENANT_ID || 't_local';
+    return this.receiptsService.delete(tenantId, id, user);
   }
 
   @Get(':id/pdf')

@@ -573,6 +573,151 @@ export class ReceiptsService {
     });
   }
 
+  async delete(tenantId: string, id: string, user: any) {
+    if (!user || user.role !== 'SUPER_ADMIN') {
+      throw new ForbiddenException('Only SUPER_ADMIN can delete generated receipts');
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      // 1. Locate receipt
+      const receipt = await tx.receipt.findFirst({
+        where: {
+          id,
+          ...(tenantId && tenantId !== 'all' ? { tenantId } : {}),
+        },
+        include: {
+          invoice: true,
+          property: true,
+          customer: true,
+        },
+      });
+
+      if (!receipt) {
+        throw new NotFoundException(`Receipt ${id} not found`);
+      }
+
+      const receiptTenantId = receipt.tenantId;
+
+      // 2. Revert allocations from invoices
+      const restoredInvoices = new Set<string>();
+
+      if (receipt.allocations && Array.isArray(receipt.allocations)) {
+        for (const alloc of receipt.allocations as any[]) {
+          if (alloc.invoiceId && alloc.amount) {
+            const inv = await tx.invoice.findUnique({ where: { id: alloc.invoiceId } });
+            if (inv) {
+              restoredInvoices.add(inv.id);
+              const restoredPaid = Math.max(0, Number(inv.paid) - Number(alloc.amount));
+              const isPaid = restoredPaid >= Number(inv.total);
+              const isPartial = restoredPaid > 0 && !isPaid;
+              const newStatus = isPaid
+                ? 'PAID'
+                : isPartial
+                ? 'PARTIAL'
+                : new Date(inv.dueDate) < new Date()
+                ? 'OVERDUE'
+                : 'PENDING';
+
+              await tx.invoice.update({
+                where: { id: inv.id },
+                data: {
+                  paid: restoredPaid,
+                  status: newStatus,
+                },
+              });
+            }
+          }
+        }
+      }
+
+      // 2b. If target invoice was linked directly and not covered in allocations
+      if (receipt.invoiceId && !restoredInvoices.has(receipt.invoiceId)) {
+        const inv = await tx.invoice.findUnique({ where: { id: receipt.invoiceId } });
+        if (inv) {
+          const restoredPaid = Math.max(0, Number(inv.paid) - Number(receipt.amount));
+          const isPaid = restoredPaid >= Number(inv.total);
+          const isPartial = restoredPaid > 0 && !isPaid;
+          const newStatus = isPaid
+            ? 'PAID'
+            : isPartial
+            ? 'PARTIAL'
+            : new Date(inv.dueDate) < new Date()
+            ? 'OVERDUE'
+            : 'PENDING';
+
+          await tx.invoice.update({
+            where: { id: inv.id },
+            data: {
+              paid: restoredPaid,
+              status: newStatus,
+            },
+          });
+        }
+      }
+
+      // 3. Unlink relations that reference receiptId
+      await tx.ownershipTransfer.updateMany({
+        where: { receiptId: receipt.id },
+        data: { receiptId: null },
+      });
+
+      await tx.plotCancellation.updateMany({
+        where: { receiptId: receipt.id },
+        data: { receiptId: null },
+      });
+
+      await tx.plotMerge.updateMany({
+        where: { receiptId: receipt.id },
+        data: { receiptId: null },
+      });
+
+      // 4. Update linked PDC if any
+      if (receipt.method === 'PDC' || receipt.method === 'CHEQUE') {
+        await tx.postDatedCheque.updateMany({
+          where: { tenantId: receiptTenantId, receiptCode: receipt.code },
+          data: { status: 'RECEIVED' },
+        });
+      }
+
+      // 5. Delete the receipt record
+      await tx.receipt.delete({
+        where: { id: receipt.id },
+      });
+
+      // 6. Audit Log
+      try {
+        await tx.auditLog.create({
+          data: {
+            tenantId: receiptTenantId,
+            userId: user.id,
+            action: 'DELETE_RECEIPT',
+            entity: 'Receipt',
+            entityId: receipt.id,
+            changes: {
+              code: receipt.code,
+              amount: Number(receipt.amount),
+              receivedAt: receipt.receivedAt,
+              method: receipt.method,
+              customerId: receipt.customerId,
+              customerName: receipt.customer?.fullName,
+              propertyId: receipt.propertyId,
+              propertyCode: receipt.property?.code,
+              allocations: receipt.allocations,
+            },
+          },
+        });
+      } catch {}
+
+      // 7. Delete cached PDF
+      try {
+        await this.storage.delete(`receipts/${receipt.id}.pdf`);
+        await this.storage.delete(`receipts/${receipt.code}.pdf`);
+      } catch {}
+
+      return { success: true, id: receipt.id, code: receipt.code };
+    });
+  }
+
   async findUserById(id: string) {
     return this.prisma.user.findUnique({
       where: { id },

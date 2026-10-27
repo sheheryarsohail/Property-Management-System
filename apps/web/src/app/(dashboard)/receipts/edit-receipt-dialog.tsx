@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import * as Dialog from '@radix-ui/react-dialog';
-import { X, Loader2, ShieldAlert, Receipt, Building2, User } from 'lucide-react';
+import { X, Loader2, ShieldAlert, Receipt, Building2, User, Trash2 } from 'lucide-react';
 import { receiptsApi } from '@/lib/api';
 import { formatCurrency } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -12,9 +12,10 @@ interface EditReceiptDialogProps {
   receipt: any | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onDelete?: (receipt: any) => void;
 }
 
-export function EditReceiptDialog({ receipt, open, onOpenChange }: EditReceiptDialogProps) {
+export function EditReceiptDialog({ receipt, open, onOpenChange, onDelete }: EditReceiptDialogProps) {
   const queryClient = useQueryClient();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -311,23 +312,40 @@ export function EditReceiptDialog({ receipt, open, onOpenChange }: EditReceiptDi
             </div>
 
             {/* Footer Buttons */}
-            <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-slate-100">
-              <button
-                type="button"
-                disabled={isSubmitting}
-                onClick={() => onOpenChange(false)}
-                className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-5 py-2 text-xs font-semibold text-white shadow-2xs hover:bg-primary/90 transition disabled:opacity-50"
-              >
-                {isSubmitting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                Save Changes
-              </button>
+            <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+              {onDelete ? (
+                <button
+                  type="button"
+                  disabled={isSubmitting}
+                  onClick={() => {
+                    onOpenChange(false);
+                    onDelete(receipt);
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50/70 px-3 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-100 transition"
+                  title="Delete Receipt (Super Admin)"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Delete Receipt
+                </button>
+              ) : <div />}
+              <div className="flex items-center gap-2.5">
+                <button
+                  type="button"
+                  disabled={isSubmitting}
+                  onClick={() => onOpenChange(false)}
+                  className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-5 py-2 text-xs font-semibold text-white shadow-2xs hover:bg-primary/90 transition disabled:opacity-50"
+                >
+                  {isSubmitting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                  Save Changes
+                </button>
+              </div>
             </div>
           </form>
         </Dialog.Content>
