@@ -1,8 +1,9 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { PdfBuilder } from '../pdf/pdf-builder';
 import { StorageService } from '../storage/storage.service';
 import { CreateReceiptDto } from './dto/create-receipt.dto';
+import { UpdateReceiptDto } from './dto/update-receipt.dto';
 import { PaymentPlansService } from '../payment-plans/payment-plans.service';
 
 @Injectable()
@@ -340,6 +341,242 @@ export class ReceiptsService {
       }
 
       return receipt;
+    });
+  }
+
+  async update(tenantId: string, id: string, input: UpdateReceiptDto, user: any) {
+    if (!user || user.role !== 'SUPER_ADMIN') {
+      throw new ForbiddenException('Only SUPER_ADMIN can edit generated receipts');
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      // 1. Locate receipt
+      const receipt = await tx.receipt.findFirst({
+        where: {
+          id,
+          ...(tenantId && tenantId !== 'all' ? { tenantId } : {}),
+        },
+        include: {
+          invoice: true,
+          property: true,
+          customer: true,
+        },
+      });
+
+      if (!receipt) {
+        throw new NotFoundException(`Receipt ${id} not found`);
+      }
+
+      const receiptTenantId = receipt.tenantId;
+
+      // 2. Validate Code if changed
+      let newCode = receipt.code;
+      if (input.code && input.code.trim() !== receipt.code) {
+        const trimmedCode = input.code.trim();
+        const existing = await tx.receipt.findUnique({
+          where: { tenantId_code: { tenantId: receiptTenantId, code: trimmedCode } },
+        });
+        if (existing && existing.id !== receipt.id) {
+          throw new BadRequestException(`Receipt number ${trimmedCode} already exists.`);
+        }
+        newCode = trimmedCode;
+      }
+
+      const oldAmount = Number(receipt.amount);
+      const newAmount = input.amount !== undefined ? Number(input.amount) : oldAmount;
+      if (isNaN(newAmount) || newAmount <= 0) {
+        throw new BadRequestException('Receipt amount must be a positive number');
+      }
+
+      // 3. Revert previous allocations from invoices
+      if (receipt.allocations && Array.isArray(receipt.allocations)) {
+        for (const alloc of receipt.allocations as any[]) {
+          if (alloc.invoiceId && alloc.amount) {
+            const inv = await tx.invoice.findUnique({ where: { id: alloc.invoiceId } });
+            if (inv) {
+              const restoredPaid = Math.max(0, Number(inv.paid) - Number(alloc.amount));
+              const isPaid = restoredPaid >= Number(inv.total);
+              const isPartial = restoredPaid > 0 && !isPaid;
+              const newStatus = isPaid ? 'PAID' : (isPartial ? 'PARTIAL' : (new Date(inv.dueDate) < new Date() ? 'OVERDUE' : 'PENDING'));
+              await tx.invoice.update({
+                where: { id: inv.id },
+                data: {
+                  paid: restoredPaid,
+                  status: newStatus,
+                },
+              });
+            }
+          }
+        }
+      }
+
+      // 4. Re-allocate the new amount
+      let remainingAmount = newAmount;
+      const newAllocations: Array<{ invoiceId: string; invoiceCode: string; amount: number }> = [];
+      const propertyId = receipt.propertyId;
+      const category = receipt.category || 'INSTALLMENT';
+
+      // 4a. Target invoice if originally linked
+      if (receipt.invoiceId) {
+        const targetInvoice = await tx.invoice.findUnique({ where: { id: receipt.invoiceId } });
+        if (targetInvoice && targetInvoice.status !== 'VOID') {
+          const targetBalance = Number(targetInvoice.total) - Number(targetInvoice.paid);
+          if (targetBalance > 0) {
+            const allocate = Math.min(remainingAmount, targetBalance);
+            remainingAmount -= allocate;
+            const newPaid = Number(targetInvoice.paid) + allocate;
+            const isPaid = newPaid >= Number(targetInvoice.total);
+
+            newAllocations.push({ invoiceId: targetInvoice.id, invoiceCode: targetInvoice.code, amount: allocate });
+
+            await tx.invoice.update({
+              where: { id: targetInvoice.id },
+              data: { paid: newPaid, status: isPaid ? 'PAID' : 'PARTIAL' },
+            });
+          }
+        }
+      }
+
+      // 4b. Waterfall surplus to other unpaid invoices for this property
+      if (remainingAmount > 0 && propertyId) {
+        const invoiceTypeFilter = category === 'DEVELOPMENT'
+          ? { type: 'DEVELOPMENT_CHARGE' as const }
+          : { type: { not: 'DEVELOPMENT_CHARGE' as const } };
+
+        const unpaidInvoices = await tx.invoice.findMany({
+          where: {
+            tenantId: receiptTenantId,
+            propertyId,
+            ...invoiceTypeFilter,
+            status: { in: ['PENDING', 'PARTIAL', 'OVERDUE', 'BOUNCED'] },
+          },
+          orderBy: { dueDate: 'asc' },
+        });
+
+        for (const inv of unpaidInvoices) {
+          if (remainingAmount <= 0) break;
+          if (inv.id === receipt.invoiceId) continue;
+
+          const balance = Number(inv.total) - Number(inv.paid);
+          if (balance > 0) {
+            const allocate = Math.min(remainingAmount, balance);
+            remainingAmount -= allocate;
+            const newPaid = Number(inv.paid) + allocate;
+            const isPaid = newPaid >= Number(inv.total);
+
+            newAllocations.push({ invoiceId: inv.id, invoiceCode: inv.code, amount: allocate });
+
+            await tx.invoice.update({
+              where: { id: inv.id },
+              data: { paid: newPaid, status: isPaid ? 'PAID' : 'PARTIAL' },
+            });
+          }
+        }
+      }
+
+      // 4c. Check if preliminary milestones (Booking / Confirmation) were satisfied to unlock installments
+      if (propertyId && category !== 'DEVELOPMENT') {
+        const generatedInvoices = await this.paymentPlansService.checkAndGenerateInstallments(receiptTenantId, propertyId, tx);
+        if (generatedInvoices.length > 0 && remainingAmount > 0) {
+          for (const inv of generatedInvoices) {
+            if (remainingAmount <= 0) break;
+            const balance = Number(inv.total) - Number(inv.paid);
+            if (balance > 0) {
+              const allocate = Math.min(remainingAmount, balance);
+              remainingAmount -= allocate;
+              const newPaid = Number(inv.paid) + allocate;
+              const isPaid = newPaid >= Number(inv.total);
+
+              newAllocations.push({ invoiceId: inv.id, invoiceCode: inv.code, amount: allocate });
+
+              await tx.invoice.update({
+                where: { id: inv.id },
+                data: { paid: newPaid, status: isPaid ? 'PAID' : 'PARTIAL' },
+              });
+            }
+          }
+        }
+      }
+
+      // 5. Update PDC if linked
+      if (receipt.method === 'PDC' || receipt.method === 'CHEQUE') {
+        await tx.postDatedCheque.updateMany({
+          where: { tenantId: receiptTenantId, receiptCode: receipt.code },
+          data: {
+            ...(input.amount !== undefined && { amount: newAmount as any }),
+            ...(input.bankName !== undefined && { bank: input.bankName }),
+            ...(input.chequeNumber !== undefined && { chequeNo: input.chequeNumber }),
+            ...(input.chequeDate !== undefined && { dueDate: input.chequeDate ? new Date(input.chequeDate) : null }),
+            ...(newCode !== receipt.code && { receiptCode: newCode }),
+          },
+        });
+      }
+
+      // 6. Update the Receipt
+      const updatedReceipt = await tx.receipt.update({
+        where: { id: receipt.id },
+        data: {
+          code: newCode,
+          amount: newAmount,
+          ...(input.receivedAt !== undefined && { receivedAt: new Date(input.receivedAt) }),
+          ...(input.method !== undefined && { method: input.method }),
+          ...(input.reference !== undefined && { reference: input.reference }),
+          ...(input.bankName !== undefined && { bankName: input.bankName }),
+          ...(input.chequeNumber !== undefined && { chequeNumber: input.chequeNumber }),
+          ...(input.chequeDate !== undefined && { chequeDate: input.chequeDate ? new Date(input.chequeDate) : null }),
+          ...(input.slipNumber !== undefined && { slipNumber: input.slipNumber }),
+          ...(input.notes !== undefined && { notes: input.notes }),
+          allocations: newAllocations,
+        },
+        include: {
+          customer: { select: { fullName: true, code: true, email: true, phone: true } },
+          invoice: { select: { code: true, total: true, paid: true, status: true, type: true } },
+          property: { select: { code: true, type: true, sizeSqYd: true, block: true } },
+        },
+      });
+
+      // 7. Audit Log
+      try {
+        await tx.auditLog.create({
+          data: {
+            tenantId: receiptTenantId,
+            userId: user.id,
+            action: 'UPDATE_RECEIPT',
+            entity: 'Receipt',
+            entityId: receipt.id,
+            changes: {
+              oldCode: receipt.code,
+              newCode,
+              oldAmount,
+              newAmount,
+              oldDate: receipt.receivedAt,
+              newDate: input.receivedAt,
+              oldMethod: receipt.method,
+              newMethod: input.method,
+              previousAllocations: receipt.allocations,
+              newAllocations,
+            },
+          },
+        });
+      } catch {}
+
+      // 8. Invalidate cached PDF in storage
+      try {
+        await this.storage.delete(`receipts/${receipt.id}.pdf`);
+        await this.storage.delete(`receipts/${receipt.code}.pdf`);
+        if (newCode !== receipt.code) {
+          await this.storage.delete(`receipts/${newCode}.pdf`);
+        }
+      } catch {}
+
+      return updatedReceipt;
+    });
+  }
+
+  async findUserById(id: string) {
+    return this.prisma.user.findUnique({
+      where: { id },
+      include: { customer: true, tenantAccess: true },
     });
   }
 

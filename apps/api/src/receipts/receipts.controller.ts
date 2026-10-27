@@ -1,4 +1,4 @@
-import { BadRequestException, Controller, Get, NotFoundException, Param, Query, Req, Res, Post, Body } from '@nestjs/common';
+import { BadRequestException, Controller, Get, NotFoundException, Param, Query, Req, Res, Post, Body, Put, ForbiddenException } from '@nestjs/common';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { ReceiptsService } from './receipts.service';
 import { StorageService } from '../storage/storage.service';
@@ -7,6 +7,8 @@ import { PdfQueueProducerService as PdfQueueService } from '../queue/pdf-queue.p
 import { etagOf } from '../common/utils/etag';
 import { ApiKeyProtected } from '../auth/api-key.decorator';
 import { IdemService } from '../common/idem/idem.service';
+import { UpdateReceiptDto } from './dto/update-receipt.dto';
+import { verifyJwtToken } from '../common/guards/api-key.guard';
 
 function isTrue(v?: string) { return v === '1' || v === 'true'; }
 function clamp(n: number, min: number, max: number) { return Math.max(min, Math.min(max, n)); }
@@ -55,6 +57,31 @@ export class ReceiptsController {
   create(@Req() req: FastifyRequest, @Body() body: any) {
     const tenantId = (req.headers['x-tenant-id'] as string) || process.env.DEFAULT_TENANT_ID || 't_local';
     return this.receiptsService.create(tenantId, body);
+  }
+
+  @Put(':id')
+  async update(
+    @Param('id') id: string,
+    @Body() body: UpdateReceiptDto,
+    @Req() req: FastifyRequest,
+  ) {
+    let user = (req as any).user;
+    if (!user) {
+      const authz = (req.headers['authorization'] as string) || '';
+      if (/^bearer\s+/i.test(authz)) {
+        const token = authz.replace(/^bearer\s+/i, '').trim();
+        const secret = process.env.JWT_SECRET || '02c69f4cc9d911c4b97ab30567b8b786dda00b8f2cead185b23ca01f892d62aa';
+        const payload = verifyJwtToken(token, secret);
+        if (payload?.sub) {
+          user = await this.receiptsService.findUserById(payload.sub);
+        }
+      }
+    }
+    if (!user || user.role !== 'SUPER_ADMIN') {
+      throw new ForbiddenException('Only super admin can edit generated receipts');
+    }
+    const tenantId = (req.headers['x-tenant-id'] as string) || (user.tenantId) || process.env.DEFAULT_TENANT_ID || 't_local';
+    return this.receiptsService.update(tenantId, id, body, user);
   }
 
   @Get(':id/pdf')

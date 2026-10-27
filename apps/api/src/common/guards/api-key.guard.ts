@@ -41,7 +41,7 @@ function getUnprefixedPath(url: string, apiPrefix?: string) {
   return pathname.startsWith(needle) ? pathname.slice(needle.length) || "/" : pathname;
 }
 
-function verifyJwtToken(token: string, secret: string): any {
+export function verifyJwtToken(token: string, secret: string): any {
   const parts = token.split(".");
   if (parts.length !== 3) return null;
   const [h, p, s] = parts;

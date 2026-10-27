@@ -284,6 +284,7 @@ export const receiptsApi = {
   list: (params?: any) => unwrap<{ data: any[], total: number, page: number, totalPages: number }>(api.get('/receipts', { params })),
   get: (id: string) => unwrap<any>(api.get(`/receipts/${id}`)),
   create: (data: any) => unwrap<any>(api.post('/receipts', data)),
+  update: (id: string, data: any) => unwrap<any>(api.put(`/receipts/${id}`, data)),
   downloadPdf: (id: string) => downloadFile(`/receipts/${id}/pdf`, `receipt-${id}.pdf`),
 }
 
