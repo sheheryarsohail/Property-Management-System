@@ -239,25 +239,25 @@ export default function AssignPropertyPage() {
                   <div className="grid gap-4 md:grid-cols-2 p-4 border rounded-md">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:col-span-2">
                     <div>
-                      <label className="mb-2 block text-sm font-medium text-emerald-600">Own Money (at Assignment)</label>
+                      <label className="mb-2 block text-sm font-medium">Own Money</label>
                       <input
                         type="number"
                         step="0.01"
                         value={overrides.ownMoney}
                         onChange={(e) => setOverrides({ ...overrides, ownMoney: e.target.value })}
                         className="w-full rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                        placeholder="e.g. 50000 (added)"
+                        placeholder="0.00"
                       />
                     </div>
                     <div>
-                      <label className="mb-2 block text-sm font-medium text-rose-600">Discount (at Assignment)</label>
+                      <label className="mb-2 block text-sm font-medium">Discount</label>
                       <input
                         type="number"
                         step="0.01"
                         value={overrides.discount}
                         onChange={(e) => setOverrides({ ...overrides, discount: e.target.value })}
                         className="w-full rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                        placeholder="e.g. 50000 (subtracted)"
+                        placeholder="0.00"
                       />
                     </div>
                     {(overrides.discount || overrides.ownMoney) && (

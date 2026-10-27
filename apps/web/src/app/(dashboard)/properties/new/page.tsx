@@ -369,25 +369,25 @@ export default function NewPropertyPage() {
                   </div>
                 )}
                 <div>
-                  <label className="mb-2 block text-sm font-medium text-emerald-600">Own Money (Added)</label>
+                  <label className="mb-2 block text-sm font-medium">Own Money</label>
                   <input
                     type="number"
                     step="0.01"
                     value={formData.ownMoney}
                     onChange={(e) => setFormData({ ...formData, ownMoney: e.target.value })}
                     className="w-full rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                    placeholder="0.00 (e.g. 50000)"
+                    placeholder="0.00"
                   />
                 </div>
                 <div>
-                  <label className="mb-2 block text-sm font-medium text-rose-600">Discount (Subtracted)</label>
+                  <label className="mb-2 block text-sm font-medium">Discount</label>
                   <input
                     type="number"
                     step="0.01"
                     value={formData.discount}
                     onChange={(e) => setFormData({ ...formData, discount: e.target.value })}
                     className="w-full rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                    placeholder="0.00 (e.g. 50000)"
+                    placeholder="0.00"
                   />
                 </div>
                 <div className="md:col-span-2">
@@ -400,7 +400,7 @@ export default function NewPropertyPage() {
                     className="w-full rounded-lg border px-3 py-2 text-sm font-semibold text-primary bg-muted cursor-not-allowed focus:outline-none"
                     placeholder="0.00"
                   />
-                  <p className="mt-1 text-xs text-muted-foreground">Automatically calculated including features (+), own money (+), and discount (-).</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Automatically calculated including features, own money, and discounts.</p>
                 </div>
               </div>
             </div>

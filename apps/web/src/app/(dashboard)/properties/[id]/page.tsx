@@ -268,15 +268,15 @@ const prop: any = property
                 </div>
               )}
               {Number(prop.ownMoney || 0) > 0 && (
-                <div className="flex justify-between border-b pb-2 text-emerald-600">
-                  <span>Own Money</span>
-                  <span className="font-semibold">+{formatCurrency(Number(prop.ownMoney))}</span>
+                <div className="flex justify-between border-b pb-2">
+                  <span className="text-muted-foreground">Own Money</span>
+                  <span className="font-semibold">{formatCurrency(Number(prop.ownMoney))}</span>
                 </div>
               )}
               {Number(prop.discount || 0) > 0 && (
-                <div className="flex justify-between border-b pb-2 text-rose-600">
-                  <span>Discount</span>
-                  <span className="font-semibold">-{formatCurrency(Number(prop.discount))}</span>
+                <div className="flex justify-between border-b pb-2">
+                  <span className="text-muted-foreground">Discount</span>
+                  <span className="font-semibold">{formatCurrency(Number(prop.discount))}</span>
                 </div>
               )}
               <div className="flex justify-between border-b pb-2">
